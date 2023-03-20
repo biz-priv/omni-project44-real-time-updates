@@ -1,0 +1,19 @@
+---
+function:
+  name: omni-dw-project44-milestone-update-${self:provider.stage}
+  handler: src/realtime/index.handler
+  memorySize: 1024
+  timeout: 90
+  
+  layers:
+    - { Ref: OmniProject44RealTimeReplicationLayerLambdaLayer }
+  package:
+    patterns:
+      - "!**/*"
+      - "src/realtime/index.js"
+      - "src/shared/**"
+  events:
+    - sqs:
+        arn: { "Fn::GetAtt": ["P44TargetQueue", "Arn"] }
+        batchSize: 10
+        functionResponseType: ReportBatchItemFailures

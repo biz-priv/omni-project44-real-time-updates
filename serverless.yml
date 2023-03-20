@@ -1,0 +1,85 @@
+service: omni-project44-real-time-updates
+
+provider:
+  name: aws
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  versionFunctions: false
+  tags: ${self:custom.tags}
+  stackTags: ${self:custom.tags}
+  iamRoleStatements: # default vpc lambda permissions
+    - Effect: "Allow"
+      Action:
+        - "logs:CreateLogGroup"
+        - "logs:CreateLogStream"
+        - "logs:PutLogEvents"
+        - "ec2:CreateNetworkInterface"
+        - "ec2:DescribeNetworkInterfaces"
+        - "ec2:DeleteNetworkInterface"
+        - "ec2:AssignPrivateIpAddresses"
+        - "ec2:UnassignPrivateIpAddresses"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:*"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "batch:Describe*"
+        - "batch:List*"
+        - "batch:SubmitJob"
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - "s3:GetObject"
+        - "s3:ListBucket"
+
+    - Effect: "Allow"
+      Action:
+        - "sqs:*"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "SNS:Publish"
+      Resource: "*"
+
+  environment:
+    REGION: ${self:custom.region}
+    STAGE: ${self:custom.stage}
+
+
+custom:
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  serverless-iam-roles-per-function:
+    defaultInherit: true
+  tags:
+    Application: OmniProject44RealTimeReplication
+    CreateBy: BizCloudExperts
+    Environment: ${self:custom.stage}
+
+plugins:
+  - serverless-offline
+  - "@shelf/serverless-simplify-default-exec-role-plugin"
+  - serverless-iam-roles-per-function
+
+package:
+  individually: true
+
+layers:
+  OmniProject44RealTimeReplicationLayerLambdaLayer:
+    path: lambdaLayer/lib
+    name: ${self:service}-layer-${self:provider.stage}
+    description: Omni Project44 Real Time Replication lambda layer for all node modules - ${self:provider.stage}
+    compatibleRuntimes:
+      - nodejs14.x
+    retain: false
+
+functions:
+  p44MilestoneUpdate: ${file(config/functions/p44MilestoneUpdate.yml):function}
+
+resources:
+  Resources:
+  # omni dw P44 tl updates Dynamo DB table
+    OmniDwP44TlUpdateTable: ${file(config/dynamoDB/omniDwP44TlUpdateTable.yml):OmniDwP44TlUpdateTable}
+    P44TargetQueue: ${file(config/queues/p44TargetQueue.yml):P44TargetQueue}

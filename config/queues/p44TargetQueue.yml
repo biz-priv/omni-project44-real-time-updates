@@ -1,0 +1,23 @@
+P44TargetDLQ:
+  Type: AWS::SQS::Queue
+  Properties:
+    QueueName: omni-project44-tl-updates-DLQ-${self:provider.stage}
+
+P44TargetQueue:
+  Type: "AWS::SQS::Queue"
+  Properties:
+    QueueName: omni-project44-tl-updates-queue-${self:provider.stage}
+    VisibilityTimeout: 300
+    RedrivePolicy:
+      deadLetterTargetArn: !GetAtt P44TargetDLQ.Arn
+      maxReceiveCount: 3
+      
+P44Subscription:
+  Type: AWS::SNS::Subscription
+  Properties:
+    TopicArn: arn:aws:sns:us-east-1:332281781429:omni-wt-rt-shipment-milestone-dev
+    Endpoint: !GetAtt 
+      - P44TargetQueue
+      - Arn
+    Protocol: sqs
+    RawMessageDelivery: "true"
