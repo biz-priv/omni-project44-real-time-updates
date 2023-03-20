@@ -23,12 +23,6 @@ provider:
       Action:
         - "dynamodb:*"
       Resource: "*"
-    - Effect: "Allow"
-      Action:
-        - "batch:Describe*"
-        - "batch:List*"
-        - "batch:SubmitJob"
-      Resource: "*"
     - Effect: Allow
       Action:
         - "s3:GetObject"
@@ -38,11 +32,7 @@ provider:
       Action:
         - "sqs:*"
       Resource: "*"
-    - Effect: "Allow"
-      Action:
-        - "SNS:Publish"
-      Resource: "*"
-
+ 
   environment:
     REGION: ${self:custom.region}
     STAGE: ${self:custom.stage}
@@ -51,23 +41,19 @@ provider:
 custom:
   region: ${opt:region, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
-  serverless-iam-roles-per-function:
-    defaultInherit: true
   tags:
-    Application: OmniProject44RealTimeReplication
+    Application: P44RtLambdaLayer
     CreateBy: BizCloudExperts
     Environment: ${self:custom.stage}
 
 plugins:
   - serverless-offline
-  - "@shelf/serverless-simplify-default-exec-role-plugin"
-  - serverless-iam-roles-per-function
 
 package:
   individually: true
 
 layers:
-  OmniProject44RealTimeReplicationLayerLambdaLayer:
+  P44RtLambdaLayer:
     path: lambdaLayer/lib
     name: ${self:service}-layer-${self:provider.stage}
     description: Omni Project44 Real Time Replication lambda layer for all node modules - ${self:provider.stage}

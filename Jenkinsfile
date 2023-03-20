@@ -11,14 +11,10 @@ pipeline {
                             env.ENVIRONMENT=env.getProperty("environment_develop")
                         } else if("${CHANGE_TARGET}".contains("master")){
                             env.ENVIRONMENT=env.getProperty("environment_prod")
-                        } else if("${CHANGE_TARGET}".contains("stage")){
-                            env.ENVIRONMENT=env.getProperty("environment_stage")
-                        }
+                        } 
                     } else if ("${GIT_BRANCH}".contains("feature") || "${GIT_BRANCH}".contains("bugfix") || "${GIT_BRANCH}".contains("develop")) {
                         env.ENVIRONMENT=env.getProperty("environment_develop")
-                    } else if ("${GIT_BRANCH}".contains("stage")){
-                        env.ENVIRONMENT=env.getProperty("environment_stage")
-                    } else if ("${GIT_BRANCH}".contains("master") || "${GIT_BRANCH}".contains("hotfix")){
+                    }  else if ("${GIT_BRANCH}".contains("master") || "${GIT_BRANCH}".contains("hotfix")){
                         env.ENVIRONMENT=env.getProperty("environment_prod")
                     }
                     sh """
@@ -45,7 +41,6 @@ pipeline {
             when {
                 anyOf {
                     branch 'master';
-                    branch 'stage';
                     branch 'develop';
                 }
                 expression {

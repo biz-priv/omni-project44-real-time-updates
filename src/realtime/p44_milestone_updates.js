@@ -1,19 +1,13 @@
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require('uuid');
 const dynamo = new AWS.DynamoDB({ apiVersion: "2012-08-10" });
+const { mapStatus } = require("../shared/datamapping");
 
-// Define the DynamoDB table names
-const SHIPMENT_MILESTONE_TABLE_NAME = "omni-wt-rt-shipment-milestone-dev";
-const REFERENCES_TABLE_NAME = "omni-wt-rt-references-dev";
-const SHIPMENT_HEADER_TABLE_NAME = "omni-wt-rt-shipment-header-dev";
-const UPDATE_TABLE_NAME = "omni-dw-p44-tl-update-dev";
-
-exports.handler = async (event, context) => {
+module.exports.handler = async (event, context) => {
     const records = event.Records;
 
     for (const record of records) {
         try {
-            const oldImage = record.dynamodb.OldImage;
             const newImage = record.dynamodb.NewImage;
 
             // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
@@ -30,7 +24,7 @@ exports.handler = async (event, context) => {
             }
 
             const Params = {
-                TableName: REFERENCES_TABLE_NAME,
+                TableName: process.env.REFERENCES_TABLE_NAME,
                 FilterExpression: 'FK_OrderNo = :orderNo and CustomerType = :customerType and FK_RefTypeId = :refType',
                 ExpressionAttributeValues: {
                     ":orderNo": { S: orderNo },
@@ -52,7 +46,7 @@ exports.handler = async (event, context) => {
 
             // Check whether the Bill of Lading belongs to MCKESSON customer
             const params2 = {
-                TableName: SHIPMENT_HEADER_TABLE_NAME,
+                TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
                 Key: {
                     PK_OrderNo: { S: orderNo }
                 },
@@ -62,7 +56,7 @@ exports.handler = async (event, context) => {
             const headerResult = await dynamo.getItem(params2).promise();
             console.log("headerResult:", headerResult)
             console.log(!headerResult.Item.BillNo)
-            if (!headerResult.Item || !["22209", "22210", "21719"].includes(headerResult.Item.BillNo)) {
+            if (!headerResult.Item || ![process.env.MCKESSON_CUSTOMER_NUMBERS].includes(headerResult.Item.BillNo)) {
                 console.log("BillNo:", headerResult.Item.BillNo)
                 console.log(`Skipping record with invalid Bill of Lading ${billOfLading}`);
                 continue;
@@ -70,7 +64,7 @@ exports.handler = async (event, context) => {
 
             // Query the tracking notes table to get the eventDateTime
             const params3 = {
-                TableName: `omni-wt-rt-tracking-notes-dev`,
+                TableName: process.env.TRACKING_NOTES_TABLE_NAME,
                 FilterExpression: "FK_OrderNo = :orderNo",
                 ExpressionAttributeValues: {
                     ":orderNo": { S: orderNo }
@@ -79,43 +73,6 @@ exports.handler = async (event, context) => {
             const trackingnotesResult = await dynamo.scan(params3).promise();
             const eventDateTime = trackingnotesResult.Item.EventDateTime;
             const utcTimestamp = new Date(eventDateTime).toISOString();
-
-            function mapStatus(validStatusCodes) {
-                switch (validStatusCodes) {
-                    case 'APL':
-                        return {
-                            type: 'ARRIVED',
-                            StopNumber: 1
-                        };
-                    case 'TTC':
-                        return {
-                            type: 'LOADING',
-                            StopNumber: 1
-                        };
-                    case 'COB':
-                        return {
-                            type: 'DEPARTED',
-                            StopNumber: 1
-                        };
-                    case 'AAD':
-                        return {
-                            type: 'UNLOADING',
-                            StopNumber: 2
-                        };
-                    case 'DEL':
-                        return {
-                            type: 'DELIVERED',
-                            StopNumber: 2
-                        };
-                    case 'CAN':
-                        return {
-                            type: 'CANCELLED',
-                            StopNumber: 2
-                        };
-                    default:
-                        return null;
-                }
-            }
             const mappedStatus = mapStatus(validStatusCodes);
 
             // Construct the payload
@@ -146,7 +103,7 @@ exports.handler = async (event, context) => {
             const id = uuidv4();
             // Save response code and payload in DynamoDB
             const dynamoParams = {
-                TableName: UPDATE_TABLE_NAME,
+                TableName: process.env.UPDATE_TABLE_NAME,
                 Item: {
                     PK: `id#${id}`,
                     SK: `ORDER#${orderId}`,
