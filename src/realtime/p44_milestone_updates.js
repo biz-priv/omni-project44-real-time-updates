@@ -8,8 +8,11 @@ module.exports.handler = async (event, context) => {
 
     for (const record of records) {
         try {
+            // Check if the event is an INSERT or MODIFY operation
+            if (record.eventName !== 'INSERT' && record.eventName !== 'MODIFY') {
+                return {};
+            }
             const newImage = record.dynamodb.NewImage;
-
             // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
             const orderNo = newImage.FK_OrderNo.S;
             const orderStatusId = newImage.FK_OrderStatusId.S;
@@ -25,7 +28,9 @@ module.exports.handler = async (event, context) => {
 
             const Params = {
                 TableName: process.env.REFERENCES_TABLE_NAME,
-                FilterExpression: 'FK_OrderNo = :orderNo and CustomerType = :customerType and FK_RefTypeId = :refType',
+                IndexName: `omni-wt-rt-ref-orderNo-index-dev`,
+                KeyConditionExpression: `FK_OrderNo = :orderNo`,
+                FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
                 ExpressionAttributeValues: {
                     ":orderNo": { S: orderNo },
                     ":customerType": { S: "B" },
@@ -33,7 +38,7 @@ module.exports.handler = async (event, context) => {
                 },
             };
             console.log("Params", Params)
-            const referenceResult = await dynamo.scan(Params).promise();
+            const referenceResult = await dynamo.query(Params).promise();
             console.log("referenceResult", referenceResult)
             const referenceNo = referenceResult.Items[0].ReferenceNo.S;
             console.log('ReferenceNo:', referenceNo);
@@ -42,7 +47,7 @@ module.exports.handler = async (event, context) => {
                 continue;
             }
 
-            const billOfLading = referenceResult.Items[0].ReferenceNo;
+            const billOfLading = referenceNo;
 
             // Check whether the Bill of Lading belongs to MCKESSON customer
             const params2 = {
@@ -56,7 +61,7 @@ module.exports.handler = async (event, context) => {
             const headerResult = await dynamo.getItem(params2).promise();
             console.log("headerResult:", headerResult)
             console.log(!headerResult.Item.BillNo)
-            if (!headerResult.Item || ![process.env.MCKESSON_CUSTOMER_NUMBERS].includes(headerResult.Item.BillNo)) {
+            if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(headerResult.Item.BillNo)) {
                 console.log("BillNo:", headerResult.Item.BillNo)
                 console.log(`Skipping record with invalid Bill of Lading ${billOfLading}`);
                 continue;
@@ -65,12 +70,13 @@ module.exports.handler = async (event, context) => {
             // Query the tracking notes table to get the eventDateTime
             const params3 = {
                 TableName: process.env.TRACKING_NOTES_TABLE_NAME,
-                FilterExpression: "FK_OrderNo = :orderNo",
+                IndexName: `omni-tracking-notes-orderNo-index-dev`,
+                KeyConditionExpression: `FK_OrderNo = :orderNo`,
                 ExpressionAttributeValues: {
                     ":orderNo": { S: orderNo }
                 }
             };
-            const trackingnotesResult = await dynamo.scan(params3).promise();
+            const trackingnotesResult = await dynamo.query(params3).promise();
             const eventDateTime = trackingnotesResult.Item.EventDateTime;
             const utcTimestamp = new Date(eventDateTime).toISOString();
             const mappedStatus = mapStatus(validStatusCodes);
@@ -103,7 +109,7 @@ module.exports.handler = async (event, context) => {
             const id = uuidv4();
             // Save response code and payload in DynamoDB
             const dynamoParams = {
-                TableName: process.env.UPDATE_TABLE_NAME,
+                TableName: process.env.P44_MILESTONE_LOGS_TABLE_NAME,
                 Item: {
                     PK: `id#${id}`,
                     SK: `ORDER#${orderId}`,

@@ -1,7 +1,7 @@
 ---
 function:
   name: omni-dw-project44-milestone-update-${self:provider.stage}
-  handler: src/realtime/p44_milstone_updates.handler
+  handler: src/realtime/p44_milestone_updates.handler
   memorySize: 1024
   timeout: 90
   
@@ -10,7 +10,7 @@ function:
   package:
     patterns:
       - "!**/*"
-      - "src/realtime/p44_milstone_updates.js"
+      - "src/realtime/p44_milestone_updates.js"
       - "src/shared/**"
   events:
     - sqs:
@@ -22,5 +22,5 @@ function:
     TRACKING_NOTES_TABLE_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/tracking-notes/ddb.tableName~true}
     REFERENCES_TABLE_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/references/ddb.tableName~true} 
     SHIPMENT_HEADER_TABLE_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-header/ddb.tableName~true}
-    UPDATE_TABLE_NAME: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/milestone-update/ddb.tableName~true}
+    P44_MILESTONE_LOGS_TABLE_NAME: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/milestone-update/ddb.tableName~true}
     MCKESSON_CUSTOMER_NUMBERS: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/mckesson-customer/numbers}
