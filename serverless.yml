@@ -69,3 +69,4 @@ resources:
   # omni dw P44 tl updates Dynamo DB table
     OmniDwP44TlUpdateTable: ${file(config/dynamoDB/omniDwP44TlUpdateTable.yml):OmniDwP44TlUpdateTable}
     P44TargetQueue: ${file(config/queues/p44TargetQueue.yml):P44TargetQueue}
+    P44TargetDLQ: ${file(file(config/queues/p44TargetQueue.yml):P44TargetDLQ}
