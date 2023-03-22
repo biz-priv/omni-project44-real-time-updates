@@ -13,6 +13,4 @@ OmniDwP44TlUpdateTable:
         KeyType: "HASH"
       - AttributeName: "ReferenceNo"
         KeyType: "RANGE"
-    StreamSpecification:
-      StreamViewType: "NEW_IMAGE"
-      StreamEnabled: true
+
