@@ -28,7 +28,7 @@ module.exports.handler = async (event, context) => {
 
             const Params = {
                 TableName: process.env.REFERENCES_TABLE_NAME,
-                IndexName: `omni-wt-rt-ref-orderNo-index-dev`,
+                IndexName: process.env.REFERENCES_ORDERNO_INDEX,
                 KeyConditionExpression: `FK_OrderNo = :orderNo`,
                 FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
                 ExpressionAttributeValues: {
@@ -70,7 +70,7 @@ module.exports.handler = async (event, context) => {
             // Query the tracking notes table to get the eventDateTime
             const params3 = {
                 TableName: process.env.TRACKING_NOTES_TABLE_NAME,
-                IndexName: `omni-tracking-notes-orderNo-index-dev`,
+                IndexName: process.env.TRACKING_NOTES_ORDERNO_INDEX,
                 KeyConditionExpression: `FK_OrderNo = :orderNo`,
                 ExpressionAttributeValues: {
                     ":orderNo": { S: orderNo }
