@@ -42,7 +42,7 @@ custom:
   region: ${opt:region, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
   tags:
-    Application: P44 Milestone Updates
+    Application: P44MilestoneUpdates
     CreateBy: BizCloudExperts
     Environment: ${self:custom.stage}
 
