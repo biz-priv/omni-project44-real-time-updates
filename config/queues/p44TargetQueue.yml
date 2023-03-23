@@ -11,13 +11,33 @@ P44TargetQueue:
     RedrivePolicy:
       deadLetterTargetArn: !GetAtt P44TargetDLQ.Arn
       maxReceiveCount: 3
-      
+
+P44TargetQueuePolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues:
+      - !Ref P44TargetQueue
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        - Sid: "Allow SNS publish to SQS"
+          Effect: Allow
+          Principal:
+            Service: "sns.amazonaws.com"
+          Resource: !GetAtt P44TargetQueue.Arn
+          Action: SQS:SendMessage
+          Condition:
+            "ForAnyValue:ArnEquals":
+              aws:SourceArn:
+                - arn:aws:sns:us-east-1:332281781429:omni-wt-rt-shipment-milestone-${self:provider.stage}
+            
 P44Subscription:
   Type: AWS::SNS::Subscription
   Properties:
-    TopicArn: arn:aws:sns:us-east-1:332281781429:omni-wt-rt-shipment-milestone-dev
+    TopicArn: arn:aws:sns:us-east-1:332281781429:omni-wt-rt-shipment-milestone-${self:provider.stage}
     Endpoint: !GetAtt 
       - P44TargetQueue
       - Arn
     Protocol: sqs
     RawMessageDelivery: "true"
+
