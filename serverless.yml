@@ -70,4 +70,5 @@ resources:
     OmniDwP44TlUpdateTable: ${file(config/dynamoDB/omniDwP44TlUpdateTable.yml):OmniDwP44TlUpdateTable}
     P44TargetQueue: ${file(config/queues/p44TargetQueue.yml):P44TargetQueue}
     P44TargetDLQ: ${file(config/queues/p44TargetQueue.yml):P44TargetDLQ}
+    P44Subscription: ${file(config/queues/p44TargetQueue.yml):P44Subscription}
     P44TargetQueuePolicy: ${file(config/queues/p44TargetQueue.yml):P44TargetQueuePolicy}
