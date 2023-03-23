@@ -61,8 +61,8 @@ layers:
       - nodejs14.x
     retain: false
 
-functions:
-  p44MilestoneUpdate: ${file(config/functions/p44MilestoneUpdate.yml):function}
+# functions:
+#   p44MilestoneUpdate: ${file(config/functions/p44MilestoneUpdate.yml):function}
 
 resources:
   Resources:
