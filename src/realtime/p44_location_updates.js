@@ -2,12 +2,12 @@ const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require('uuid');
 const axios = require("axios")
 const { putItem, get, allqueries } = require("../shared/dynamo")
-const run = require("../shared/tokengenerator")
+const { run } = require("../shared/tokengenerator")
 
 
 
 module.exports.handler = async (event, context) => {
-    console.log("event:",event)
+    console.log("event:", event)
     const records = event.Records;
     const id = uuidv4();
 
@@ -35,14 +35,13 @@ module.exports.handler = async (event, context) => {
             };
             const trackingResult = await allqueries(trackingparams);
             console.log("trackingResult:", trackingResult);
-
+            const note = trackingResult.Items[0].Note.S;
+            const lat = note.split('Latitude=')[1].split(' ')[0];
+            const long = note.split('Longitude=')[1].split(' ')[0];
             if (trackingResult.Items.length > 0) {
-                const note = trackingResult.Items[0].Note.S;
                 console.log("note:", note)
-                const Latitude = note.split('Latitude=')[1].split(' ')[0];
-                const Longitude = note.split('Longitude=')[1].split(' ')[0];
-                console.log("Latitude:", Latitude)
-                console.log("Longitude:", Longitude)
+                console.log("Latitude:", lat)
+                console.log("Longitude:", long)
             } else {
                 console.log("No Location Updates found for orderNo:", orderNo);
                 return null;
@@ -74,16 +73,21 @@ module.exports.handler = async (event, context) => {
 
             const milestoneparams = {
                 TableName: process.env.SHIPMENT_MILESTONE_TABLE_NAME,
-                Key: {
-                    FK_OrderNo: { S: orderNo }
+                KeyConditionExpression: `FK_OrderNo = :orderNo`,
+                ExpressionAttributeValues: {
+                    ":orderNo": { S: orderNo },
                 },
             };
             console.log("milestoneparams:", milestoneparams)
-            const milestoneResult = await get(milestoneparams);
-            console.log("milestoneResult:", milestoneResult)
-            if (milestoneResult.Item.FK_OrderNo !== orderNo) {
-                console.log("Order numbers does not match")
-                continue;
+            const milestoneResult = await allqueries(milestoneparams);
+            for (let i = 0; i < milestoneResult.Items.length; i++) {
+                let fkOrderNo = milestoneResult.Items[i].FK_OrderNo.S;
+                if (fkOrderNo == orderNo) {
+                    console.log("Order numbers matched");
+                } else {
+                    console.log("Order numbers do not match");
+                    break;
+                }
             }
             const headerparams = {
                 TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
@@ -129,8 +133,8 @@ module.exports.handler = async (event, context) => {
                         value: billOfLading
                     }
                 ],
-                latitude: Latitude,
-                longitude: Longitude,
+                latitude: lat,
+                longitude: long,
                 utcTimestamp: utcTimestamp,
                 customerId: "MCKESSON",
                 eventType: "POSITION"
