@@ -26,3 +26,7 @@ function:
     MCKESSON_CUSTOMER_NUMBERS: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/mckesson-customer/numbers}
     REFERENCES_ORDERNO_INDEX: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/references/ddb.orderNoIndex}
     TRACKING_NOTES_ORDERNO_INDEX: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/tracking-notes/ddb.orderNoIndex}
+    P44_STATUS_UPDATES_API: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/api/statusUpdates}      
+    P44_CLIENT_ID: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/p44-credentials/clientId}
+    P44_CLIENT_SECRET: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/p44-credentials/clientSecret}
+    P44_AUTH_API: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/authApi.url}

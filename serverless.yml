@@ -62,13 +62,23 @@ layers:
     retain: false
 
 functions:
-  p44MilestoneUpdate: ${file(config/functions/p44MilestoneUpdate.yml):function}
+  #realtime
+  p44MilestoneUpdate: ${file(config/functions/realtime/p44MilestoneUpdate.yml):function}
+  p44LocationUpdate: ${file(config/functions/realtime/p44LocationUpdate.yml):function}
 
+  #dynamoStreamToSns
+  trackingNotesStreamToSns: ${file(config/functions/dynamoStreamToSns/trackingNotesStreamToSns.yml):function}  
+  
 resources:
   Resources:
-  # omni dw P44 tl updates Dynamo DB table
     OmniDwP44TlUpdateTable: ${file(config/dynamoDB/omniDwP44TlUpdateTable.yml):OmniDwP44TlUpdateTable}
     P44TargetQueue: ${file(config/queues/p44TargetQueue.yml):P44TargetQueue}
     P44TargetDLQ: ${file(config/queues/p44TargetQueue.yml):P44TargetDLQ}
     P44Subscription: ${file(config/queues/p44TargetQueue.yml):P44Subscription}
     P44TargetQueuePolicy: ${file(config/queues/p44TargetQueue.yml):P44TargetQueuePolicy}
+
+    TrackingNotesTopic: ${file(config/sns/trackingNotesSns.yml):TrackingNotesTopic}
+    P44TrackingNotesSubscription: ${file(config/sns/trackingNotesSns.yml):P44TrackingNotesSubscription}
+    P44LocationUpdatesQueue: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueue}
+    P44LocationUpdatesDLQ: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesDLQ}
+    P44LocationUpdatesQueuePolicy: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueuePolicy}

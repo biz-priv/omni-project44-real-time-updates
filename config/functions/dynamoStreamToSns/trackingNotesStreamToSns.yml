@@ -1,0 +1,33 @@
+---
+function:
+  name: omni-wt-tracking-notes-source-ddb-to-sns-${self:provider.stage}
+  handler: src/dynamoStreamToSns/trackingNotesStreamToSns.handler
+  runtime: nodejs14.x
+  layers:
+    - { Ref: P44RtLambdaLayerLambdaLayer }
+  package:
+    patterns:
+      - "!**/*"
+      - "src/dynamoStreamToSns/trackingNotesStreamToSns.js"
+      - "src/shared/**"
+  events:
+    - stream: ${ssm:/omni-wt-rt-updates/dev/tracking-notes/ddb.streamArn~true}
+  environment:
+    SNS_TOPIC_ARN: ${ssm:/omni-wt-rt-updates/dev/tracking-notes/sns.arn~true}
+    DYNAMO_DB_TABLE: ${ssm:/omni-wt-rt-updates/dev/tracking-notes/ddb.tableName~true}
+  iamRoleStatementsName: omni-wt-tn-source-ddb-to-sns-${self:provider.stage}-role
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetRecords"
+        - "dynamodb:GetShardIterator"
+        - "dynamodb:DescribeStream"
+        - "dynamodb:ListStreams"
+        - "dynamodb:DescribeTable"
+        - "dynamodb:Query"
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+        - "dynamodb:DeleteItem"
+      Resource:
+        - "*"
