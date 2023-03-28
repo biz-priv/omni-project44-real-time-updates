@@ -149,6 +149,7 @@ module.exports.handler = async (event, context) => {
                     }
                 }
             );
+            console.log("pushed payload to P44 Api successfully")
             console.log("p44Response", p44Response)
             // Save response code and payload in DynamoDB
             console.log(id, billOfLading)
