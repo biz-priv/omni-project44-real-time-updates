@@ -29,12 +29,12 @@ P44TargetQueuePolicy:
           Condition:
             "ForAnyValue:ArnEquals":
               aws:SourceArn:
-                - arn:aws:sns:us-east-1:332281781429:omni-wt-rt-shipment-milestone-${self:provider.stage}
-            
+                - ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-milestone/sns.arn~true}
+              
 P44Subscription:
   Type: AWS::SNS::Subscription
   Properties:
-    TopicArn: arn:aws:sns:us-east-1:332281781429:omni-wt-rt-shipment-milestone-${self:provider.stage}
+    TopicArn: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-milestone/sns.arn~true}
     Endpoint: !GetAtt 
       - P44TargetQueue
       - Arn

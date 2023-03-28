@@ -1,0 +1,17 @@
+TrackingNotesTopic:
+  Type: AWS::SNS::Topic
+  Properties:
+    TopicName: omni-wt-rt-tracking-notes-${self:provider.stage}
+
+P44TrackingNotesSubscription:
+  Type: AWS::SNS::Subscription
+  Properties:
+    TopicArn: !Ref TrackingNotesTopic
+    Endpoint: !GetAtt
+      - ToyotaTargetQueue
+      - Arn
+    Protocol: sqs
+    RawMessageDelivery: "true"
+    FilterPolicy:
+      FK_UserId:
+        - ${ssm:/omni-wt-rt-updates/${self:provider.stage}/p44/trackingNotes/fkUserId~true} #"macropt"

@@ -1,0 +1,33 @@
+P44LocationUpdatesDLQ:
+  Type: AWS::SQS::Queue
+  Properties:
+    QueueName: omni-project44-tl-location-updates-DLQ-${self:provider.stage}
+
+P44LocationUpdatesQueue:
+  Type: AWS::SQS::Queue
+  Properties:
+    QueueName: omni-project44-tl-location-updates-queue-${self:provider.stage}
+    VisibilityTimeout: 90
+    RedrivePolicy:
+      deadLetterTargetArn: !GetAtt P44LocationUpdatesDLQ.Arn
+      maxReceiveCount: 3
+
+P44LocationUpdatesQueuePolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues:
+      - !Ref P44LocationUpdatesQueue
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        - Sid: "Allow SNS publish to SQS"
+          Effect: Allow
+          Principal:
+            Service: "sns.amazonaws.com"
+          Resource: !GetAtt P44LocationUpdatesQueue.Arn
+          Action: SQS:SendMessage
+          Condition:
+            "ForAnyValue:ArnEquals":
+              aws:SourceArn:
+                - !Ref TrackingNotesTopic
+
