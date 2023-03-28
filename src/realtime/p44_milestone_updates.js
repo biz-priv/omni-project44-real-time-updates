@@ -4,23 +4,20 @@ const axios = require("axios")
 const { mapStatus } = require("../shared/datamapping");
 const { putItem, allqueries, get } = require("../shared/dynamo")
 const { run } = require("../shared/tokengenerator")
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 
 module.exports.handler = async (event, context) => {
 
-    console.log("event:", event)
+    console.log('Received event:', JSON.stringify(event));
     const records = event.Records;
     const id = uuidv4();
 
     for (const record of records) {
         try {
-            // Check if the event is an INSERT or MODIFY operation
-            if (record.eventName !== 'INSERT' && record.eventName !== 'MODIFY') {
-                return {
-                    body: "Skipping the record as it's not INSERT or MODIFY"
-                };
-            }
-            const newImage = record.dynamodb.NewImage;
+            console.log('Processing record:', JSON.stringify(record));
+            const body = JSON.parse(record.body);
+            const newImage = body.NewImage;
             // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
             const orderNo = newImage.FK_OrderNo.S;
             const orderStatusId = newImage.FK_OrderStatusId.S;
@@ -91,7 +88,7 @@ module.exports.handler = async (event, context) => {
             // const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
             console.log("eventDateTime", eventDateTime)
             let utcTimestamp = new Date(eventDateTime).toISOString();
-            utcTimestamp = utcTimestamp.slice(0, -5);
+            utcTimestamp = utcTimestamp.slice(0, -1);
             const mappedStatus = await mapStatus(orderStatusId);
             console.log("orderStatusId", orderStatusId)
             console.log("mappedStatus", mappedStatus)
