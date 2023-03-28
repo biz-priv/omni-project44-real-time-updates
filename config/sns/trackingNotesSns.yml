@@ -8,7 +8,7 @@ P44TrackingNotesSubscription:
   Properties:
     TopicArn: !Ref TrackingNotesTopic
     Endpoint: !GetAtt
-      - ToyotaTargetQueue
+      - P44LocationUpdatesQueue
       - Arn
     Protocol: sqs
     RawMessageDelivery: "true"
