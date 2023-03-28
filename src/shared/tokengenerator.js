@@ -7,9 +7,6 @@ async function run() {
     client_id: process.env.P44_CLIENT_ID,
     client_secret: process.env.P44_CLIENT_SECRET,
     grant_type: 'client_credentials'
-
-
-    
   };
 
   const resp = await fetch(
