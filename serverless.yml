@@ -32,6 +32,10 @@ provider:
       Action:
         - "sqs:*"
       Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "SNS:Publish"
+      Resource: "*"      
  
   environment:
     REGION: ${self:custom.region}
