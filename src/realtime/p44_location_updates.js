@@ -15,7 +15,7 @@ module.exports.handler = async (event, context) => {
     for (const record of records) {
         try {
             console.log('Processing record:', JSON.stringify(record));
-            const body = (record.body);
+            const body = JSON.parse(record.body);
             const newImage = body.NewImage;
             // const note = newImage.Note.S;
             const orderNo = newImage.FK_OrderNo.S;
