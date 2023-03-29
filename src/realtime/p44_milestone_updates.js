@@ -4,8 +4,7 @@ const axios = require("axios")
 const { mapStatus } = require("../shared/datamapping");
 const { putItem, allqueries, get } = require("../shared/dynamo")
 const { run } = require("../shared/tokengenerator")
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
-
+const moment = require('moment');
 
 module.exports.handler = async (event, context) => {
 
@@ -71,24 +70,34 @@ module.exports.handler = async (event, context) => {
             }
 
             // Querying the tracking notes table to get the eventDateTime
-            // const trackingparams = {
-            //     TableName: process.env.TRACKING_NOTES_TABLE_NAME,
-            //     IndexName: process.env.TRACKING_NOTES_ORDERNO_INDEX,
-            //     KeyConditionExpression: `FK_OrderNo = :orderNo`,
-            //     ExpressionAttributeValues: {
-            //         ":orderNo": { S: orderNo }
-            //     }
-            // };
-            // const trackingnotesResult = await allqueries(trackingparams);
-            // console.log("trackingnotesResult", JSON.stringify(trackingnotesResult))
-            // if (trackingnotesResult.Items.length == 0) {
-            //     throw "trackingnotesResult have no values"
-            // }
-            const eventDateTime = newImage.EventDateTime.S;
-            // const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
-            console.log("eventDateTime", eventDateTime)
-            let utcTimestamp = new Date(eventDateTime).toISOString();
-            utcTimestamp = utcTimestamp.slice(0, -1);
+            const trackingparams = {
+                TableName: process.env.TRACKING_NOTES_TABLE_NAME,
+                IndexName: process.env.TRACKING_NOTES_ORDERNO_INDEX,
+                KeyConditionExpression: `FK_OrderNo = :orderNo`,
+                ExpressionAttributeValues: {
+                    ":orderNo": { S: orderNo }
+                }
+            };
+            const trackingnotesResult = await allqueries(trackingparams);
+            console.log("trackingnotesResult", JSON.stringify(trackingnotesResult))
+            if (trackingnotesResult.Items.length == 0) {
+                throw "trackingnotesResult have no values"
+            }
+            const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
+
+            const eventTimezone = newImage.EventTimeZone.S;
+            console.log("eventTimezone", eventTimezone)
+            const timezoneparams = {
+                TableName: process.env.TIME_ZONE_TABLE_NAME,
+                KeyConditionExpression: `PK_TimeZoneCode = :code`,
+                ExpressionAttributeValues: {
+                    ":code": { S: eventTimezone }
+                }
+            };
+            console.log("timezoneparams:",timezoneparams)
+            const timezoneResult = await allqueries(timezoneparams);
+            const hoursaway = timezoneResult.Items[0].HoursAway.S;
+            const utcTimestamp = moment(eventDateTime).add(5 - hoursaway, 'hours').format('YYYY-MM-DDTHH:mm:ss');
             const mappedStatus = await mapStatus(orderStatusId);
             console.log("orderStatusId", orderStatusId)
             console.log("mappedStatus", mappedStatus)
@@ -101,7 +110,7 @@ module.exports.handler = async (event, context) => {
                         value: billOfLading
                     }
                 ],
-                utcTimestamp,
+                utcTimestamp: utcTimestamp,
                 latitude: "0",
                 longitude: "0",
                 customerId: "MCKESSON",
@@ -112,7 +121,6 @@ module.exports.handler = async (event, context) => {
             // generating token with P44 oauth API 
             const getaccesstocken = await run()
             console.log("getaccesstocken", getaccesstocken)
-
             // Calling P44 API with the constructed payload
             const p44Response = await axios.post(
                 process.env.P44_STATUS_UPDATES_API,
