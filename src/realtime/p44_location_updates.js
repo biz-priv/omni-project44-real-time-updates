@@ -3,7 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require("axios")
 const { putItem, get, allqueries } = require("../shared/dynamo")
 const { run } = require("../shared/tokengenerator")
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+const moment = require('moment');
 
 
 
@@ -15,7 +15,7 @@ module.exports.handler = async (event, context) => {
     for (const record of records) {
         try {
             console.log('Processing record:', JSON.stringify(record));
-            const body = JSON.parse(record.body);
+            const body = (record.body);
             const newImage = body.NewImage;
             // const note = newImage.Note.S;
             const orderNo = newImage.FK_OrderNo.S;
@@ -77,6 +77,8 @@ module.exports.handler = async (event, context) => {
             };
             console.log("milestoneparams:", milestoneparams)
             const milestoneResult = await allqueries(milestoneparams);
+            const eventTimezone = milestoneResult.Items[0].EventTimeZone.S;
+            console.log("eventTimezone:",eventTimezone)
             for (let i = 0; i < milestoneResult.Items.length; i++) {
                 let fkOrderNo = milestoneResult.Items[i].FK_OrderNo.S;
                 if (fkOrderNo == orderNo) {
@@ -117,11 +119,20 @@ module.exports.handler = async (event, context) => {
             if (trackingnotesResult.Items.length == 0) {
                 throw "trackingnotesResult have no values"
             }
-            // const eventDateTime = newImage.EventDateTime.S;
             const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
             console.log("eventDateTime", eventDateTime)
-            let utcTimestamp = new Date(eventDateTime).toISOString();
-            utcTimestamp = utcTimestamp.slice(0, -1);
+            const timezoneparams = {
+                TableName: process.env.TIME_ZONE_TABLE_NAME,
+                KeyConditionExpression: `PK_TimeZoneCode = :code`,
+                ExpressionAttributeValues: {
+                    ":code": { S: eventTimezone }
+                }
+            };
+            console.log("timezoneparams:",timezoneparams)
+            const timezoneResult = await allqueries(timezoneparams);
+            const hoursaway = timezoneResult.Items[0].HoursAway.S;
+            const utcTimestamp = moment(eventDateTime).add(5 - hoursaway, 'hours').format('YYYY-MM-DDTHH:mm:ss');            
+
             // Construct the payload
             const payload = {
                 shipmentIdentifiers: [
