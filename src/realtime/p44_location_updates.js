@@ -1,14 +1,14 @@
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require('uuid');
-const axios = require("axios")
-const { putItem, get, allqueries } = require("../shared/dynamo")
-const { run } = require("../shared/tokengenerator")
+const axios = require("axios");
+const { putItem, get, allqueries } = require("../shared/dynamo");
+const { run } = require("../shared/tokengenerator");
 const moment = require('moment');
 
 
 
 module.exports.handler = async (event, context) => {
-    console.log("event:", JSON.stringify(event))
+    console.log("event:", JSON.stringify(event));
     const records = event.Records;
     const id = uuidv4();
 
@@ -32,18 +32,16 @@ module.exports.handler = async (event, context) => {
             };
             const trackingResult = await allqueries(trackingparams);
             console.log("trackingResult:", trackingResult);
+            if (trackingResult.Items.length === 0) {
+            console.error("No Location Updates found for orderNo:", orderNo);
+            continue;
+            }
             const note = trackingResult.Items[0].Note.S;
             const lat = note.split('Latitude=')[1].split(' ')[0];
             const long = note.split('Longitude=')[1].split(' ')[0];
-            if (trackingResult.Items.length > 0) {
-                console.log("note:", note)
-                console.log("Latitude:", lat)
-                console.log("Longitude:", long)
-            } else {
-                console.log("No Location Updates found for orderNo:", orderNo);
-                return null;
-            }
-
+            console.log("note:", note);
+            console.log("Latitude:", lat);
+            console.log("Longitude:", long);
             const Params = {
                 TableName: process.env.REFERENCES_TABLE_NAME,
                 IndexName: process.env.REFERENCES_ORDERNO_INDEX,
@@ -55,17 +53,15 @@ module.exports.handler = async (event, context) => {
                     ":refType": { S: "BOL" }
                 },
             };
-            console.log("Params", Params)
+            console.log("Params", Params);
             const referenceResult = await allqueries(Params);
-            console.log("referenceResult", referenceResult)
-            console.log("test")
-            const referenceNo = referenceResult.Items[0].ReferenceNo.S;
-            console.log('ReferenceNo:', referenceNo);
+            console.log("referenceResult", referenceResult);
             if (referenceResult.Items.length === 0) {
-                console.log(`No Bill of Lading found for order ${orderNo}`);
+                console.error(`No Bill of Lading found for order ${orderNo}`);
                 continue;
             }
-
+            const referenceNo = referenceResult.Items[0].ReferenceNo.S;
+            console.log('ReferenceNo:', referenceNo);
             const billOfLading = referenceNo;
 
             const milestoneparams = {
@@ -75,10 +71,8 @@ module.exports.handler = async (event, context) => {
                     ":orderNo": { S: orderNo },
                 },
             };
-            console.log("milestoneparams:", milestoneparams)
+            console.log("milestoneparams:", milestoneparams);
             const milestoneResult = await allqueries(milestoneparams);
-            const eventTimezone = milestoneResult.Items[0].EventTimeZone.S;
-            console.log("eventTimezone:",eventTimezone)
             for (let i = 0; i < milestoneResult.Items.length; i++) {
                 let fkOrderNo = milestoneResult.Items[i].FK_OrderNo.S;
                 if (fkOrderNo == orderNo) {
@@ -88,6 +82,8 @@ module.exports.handler = async (event, context) => {
                     break;
                 }
             }
+            const eventTimezone = milestoneResult.Items[0].EventTimeZone.S;
+            console.log("eventTimezone:",eventTimezone);            
             const headerparams = {
                 TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
                 Key: {
@@ -95,14 +91,13 @@ module.exports.handler = async (event, context) => {
                 },
                 ProjectionExpression: "BillNo"
             };
-            console.log("headerparams:", headerparams)
+            console.log("headerparams:", headerparams);
             const headerResult = await get(headerparams);
-            console.log("headerResult:", headerResult)
+            console.log("headerResult:", headerResult);
             const BillNo = headerResult.Item.BillNo.S;
-            console.log("BillNo:", BillNo)
+            console.log("BillNo:", BillNo);
             if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(BillNo)) {
-                console.log("MCKESSON_CUSTOMER_NUMBERS:", process.env.MCKESSON_CUSTOMER_NUMBERS)
-                console.log(`Skipping record with invalid Bill of Lading ${billOfLading}`);
+                console.error(`Skipping the record as the BillNo does not match MCKESSON customer`);
                 continue;
             }
 
@@ -117,10 +112,10 @@ module.exports.handler = async (event, context) => {
             };
             const trackingnotesResult = await allqueries(trackingnotesparams);
             if (trackingnotesResult.Items.length == 0) {
-                throw "trackingnotesResult have no values"
+                throw "trackingnotesResult have no values";
             }
             const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
-            console.log("eventDateTime", eventDateTime)
+            console.log("eventDateTime", eventDateTime);
             const timezoneparams = {
                 TableName: process.env.TIME_ZONE_TABLE_NAME,
                 KeyConditionExpression: `PK_TimeZoneCode = :code`,
@@ -128,8 +123,12 @@ module.exports.handler = async (event, context) => {
                     ":code": { S: eventTimezone }
                 }
             };
-            console.log("timezoneparams:",timezoneparams)
+            console.log("timezoneparams:",timezoneparams);
             const timezoneResult = await allqueries(timezoneparams);
+            if (timezoneResult.Items.length === 0) {
+                console.error(`timezoneResult have no values`);
+                continue;
+            }            
             const hoursaway = timezoneResult.Items[0].HoursAway.S;
             const utcTimestamp = moment(eventDateTime).add(5 - hoursaway, 'hours').format('YYYY-MM-DDTHH:mm:ss');            
 
@@ -147,9 +146,9 @@ module.exports.handler = async (event, context) => {
                 customerId: "MCKESSON",
                 eventType: "POSITION"
             };
-            console.log("payload:", payload)
-            const getaccesstocken = await run()
-            console.log("getaccesstocken", getaccesstocken)
+            console.log("payload:", payload);
+            const getaccesstocken = await run();
+            console.log("getaccesstocken", getaccesstocken);
             // Call P44 API with the constructed payload
             const p44Response = await axios.post(
                 process.env.P44_STATUS_UPDATES_API,
@@ -161,10 +160,10 @@ module.exports.handler = async (event, context) => {
                     }
                 }
             );
-            console.log("pushed payload to P44 Api successfully")
-            console.log("p44Response", p44Response)
+            console.log("pushed payload to P44 Api successfully");
+            console.log("p44Response", p44Response);
             // Save response code and payload in DynamoDB
-            console.log(id, billOfLading)
+            console.log(id, billOfLading);
             const dynamoParams = {
                 TableName: process.env.P44_MILESTONE_LOGS_TABLE_NAME,
                 Item: {
@@ -174,11 +173,11 @@ module.exports.handler = async (event, context) => {
                     p44Payload: JSON.stringify(payload)
                 }
             };
-            const result = await putItem(dynamoParams);
-            console.log("record is inserted successfully")
+            const result = await putItem(dynamoParams)
+            console.log("record is inserted successfully");
         } catch (error) {
             console.error(error);
-            return error
+            return error;
         }
     }
-}
+};
