@@ -1,0 +1,16 @@
+OmniDwP44TlUpdateTable:
+  Type: AWS::DynamoDB::Table
+  Properties:
+    TableName: omni-dw-p44-tl-update-${self:provider.stage}
+    BillingMode: PAY_PER_REQUEST
+    AttributeDefinitions:
+      - AttributeName: "UUID"
+        AttributeType: "S"
+      - AttributeName: "ReferenceNo"
+        AttributeType: "S"
+    KeySchema:
+      - AttributeName: "UUID"
+        KeyType: "HASH"
+      - AttributeName: "ReferenceNo"
+        KeyType: "RANGE"
+

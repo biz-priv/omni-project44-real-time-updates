@@ -1,0 +1,88 @@
+service: omni-project44-real-time-updates
+
+provider:
+  name: aws
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  versionFunctions: false
+  tags: ${self:custom.tags}
+  stackTags: ${self:custom.tags}
+  iamRoleStatements: # default vpc lambda permissions
+    - Effect: "Allow"
+      Action:
+        - "logs:CreateLogGroup"
+        - "logs:CreateLogStream"
+        - "logs:PutLogEvents"
+        - "ec2:CreateNetworkInterface"
+        - "ec2:DescribeNetworkInterfaces"
+        - "ec2:DeleteNetworkInterface"
+        - "ec2:AssignPrivateIpAddresses"
+        - "ec2:UnassignPrivateIpAddresses"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:*"
+      Resource: "*"
+    - Effect: Allow
+      Action:
+        - "s3:GetObject"
+        - "s3:ListBucket"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "sqs:*"
+      Resource: "*"
+    - Effect: "Allow"
+      Action:
+        - "SNS:Publish"
+      Resource: "*"      
+ 
+  environment:
+    REGION: ${self:custom.region}
+    STAGE: ${self:custom.stage}
+
+
+custom:
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  tags:
+    Application: P44MilestoneUpdates
+    CreateBy: BizCloudExperts
+    Environment: ${self:custom.stage}
+
+plugins:
+  - serverless-offline
+
+package:
+  individually: true
+
+layers:
+  P44RtLambdaLayer:
+    path: lambdaLayer/lib
+    name: ${self:service}-layer-${self:provider.stage}
+    description: Omni Project44 Real Time Replication lambda layer for all node modules - ${self:provider.stage}
+    compatibleRuntimes:
+      - nodejs14.x
+    retain: false
+
+functions:
+  #realtime
+  p44MilestoneUpdate: ${file(config/functions/realtime/p44MilestoneUpdate.yml):function}
+  p44LocationUpdate: ${file(config/functions/realtime/p44LocationUpdate.yml):function}
+
+  #dynamoStreamToSns
+  trackingNotesStreamToSns: ${file(config/functions/dynamoStreamToSns/trackingNotesStreamToSns.yml):function}  
+  
+resources:
+  Resources:
+    OmniDwP44TlUpdateTable: ${file(config/dynamoDB/omniDwP44TlUpdateTable.yml):OmniDwP44TlUpdateTable}
+    P44TargetQueue: ${file(config/queues/p44TargetQueue.yml):P44TargetQueue}
+    P44TargetDLQ: ${file(config/queues/p44TargetQueue.yml):P44TargetDLQ}
+    P44Subscription: ${file(config/queues/p44TargetQueue.yml):P44Subscription}
+    P44TargetQueuePolicy: ${file(config/queues/p44TargetQueue.yml):P44TargetQueuePolicy}
+
+    TrackingNotesTopic: ${file(config/sns/trackingNotesSns.yml):TrackingNotesTopic}
+    P44TrackingNotesSubscription: ${file(config/sns/trackingNotesSns.yml):P44TrackingNotesSubscription}
+    P44LocationUpdatesQueue: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueue}
+    P44LocationUpdatesDLQ: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesDLQ}
+    P44LocationUpdatesQueuePolicy: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueuePolicy}

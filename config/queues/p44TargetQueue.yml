@@ -1,0 +1,43 @@
+P44TargetDLQ:
+  Type: AWS::SQS::Queue
+  Properties:
+    QueueName: omni-project44-tl-updates-DLQ-${self:provider.stage}
+
+P44TargetQueue:
+  Type: "AWS::SQS::Queue"
+  Properties:
+    QueueName: omni-project44-tl-updates-queue-${self:provider.stage}
+    VisibilityTimeout: 300
+    RedrivePolicy:
+      deadLetterTargetArn: !GetAtt P44TargetDLQ.Arn
+      maxReceiveCount: 3
+
+P44TargetQueuePolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues:
+      - !Ref P44TargetQueue
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        - Sid: "Allow SNS publish to SQS"
+          Effect: Allow
+          Principal:
+            Service: "sns.amazonaws.com"
+          Resource: !GetAtt P44TargetQueue.Arn
+          Action: SQS:SendMessage
+          Condition:
+            "ForAnyValue:ArnEquals":
+              aws:SourceArn:
+                - ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-milestone/sns.arn~true}
+              
+P44Subscription:
+  Type: AWS::SNS::Subscription
+  Properties:
+    TopicArn: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-milestone/sns.arn~true}
+    Endpoint: !GetAtt 
+      - P44TargetQueue
+      - Arn
+    Protocol: sqs
+    RawMessageDelivery: "true"
+
