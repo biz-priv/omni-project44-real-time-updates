@@ -43,12 +43,12 @@ module.exports.handler = async (event, context) => {
             console.log("referenceparams:", referenceparams)
             const referenceResult = await allqueries(referenceparams);
             console.log("referenceResult", referenceResult)
-            const referenceNo = referenceResult.Items[0].ReferenceNo.S;
-            console.log('ReferenceNo:', referenceNo);
             if (referenceResult.Items.length === 0) {
-                console.log(`No Bill of Lading found for order ${orderNo}`);
+                console.error(`No Bill of Lading found for order ${orderNo}`);
                 continue;
             }
+            const referenceNo = referenceResult.Items[0].ReferenceNo.S;
+            console.log('ReferenceNo:', referenceNo);
             const billOfLading = referenceNo;
             // Checking whether the Bill belongs to MCKESSON customer
             const headerparams = {
@@ -63,9 +63,8 @@ module.exports.handler = async (event, context) => {
             console.log("headerResult:", headerResult)
             console.log(!headerResult.Item.BillNo.S)
             if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(headerResult.Item.BillNo.S)) {
-                console.log("MCKESSON_CUSTOMER_NUMBERS:", process.env.MCKESSON_CUSTOMER_NUMBERS)
                 console.log("BillNo:", headerResult.Item.BillNo)
-                console.log(`Skipping record with invalid Bill of Lading ${billOfLading}`);
+                console.error(`Skipping the record as the BillNo does not match  MCKESSON customer`);
                 continue;
             }
 
@@ -84,7 +83,6 @@ module.exports.handler = async (event, context) => {
                 throw "trackingnotesResult have no values"
             }
             const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
-
             const eventTimezone = newImage.EventTimeZone.S;
             console.log("eventTimezone", eventTimezone)
             const timezoneparams = {
@@ -94,8 +92,12 @@ module.exports.handler = async (event, context) => {
                     ":code": { S: eventTimezone }
                 }
             };
-            console.log("timezoneparams:",timezoneparams)
+            console.log("timezoneparams:", timezoneparams)
             const timezoneResult = await allqueries(timezoneparams);
+            if (timezoneResult.Items.length === 0) {
+                console.error(`timezoneResult have no values`);
+                continue;
+            }
             const hoursaway = timezoneResult.Items[0].HoursAway.S;
             const utcTimestamp = moment(eventDateTime).add(5 - hoursaway, 'hours').format('YYYY-MM-DDTHH:mm:ss');
             const mappedStatus = await mapStatus(orderStatusId);
