@@ -16,7 +16,7 @@ module.exports.handler = async (event, context) => {
     for (const record of records) {
         try {
             console.log('Processing record:', JSON.stringify(record));
-            const body = (record.body);
+            const body = JSON.parse(record.body);
             const newImage = body.NewImage;
             // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
             const orderNo = newImage.FK_OrderNo.S;
