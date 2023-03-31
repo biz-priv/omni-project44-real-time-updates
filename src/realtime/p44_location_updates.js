@@ -168,7 +168,6 @@ module.exports.handler = async (event, context) => {
             // As json stringyfy is not supported for converting circular reference object to string
             // used Flatted npm package
             const jsonp44Response = Flatted.stringify(p44Response);
-            console.log("jsonp44Response:", jsonp44Response);
             // Save response code and payload in DynamoDB
             console.log(id, billOfLading);
             const dynamoParams = {
