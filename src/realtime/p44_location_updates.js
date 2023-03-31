@@ -3,7 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require("axios");
 const { putItem, get, allqueries } = require("../shared/dynamo");
 const { run } = require("../shared/tokengenerator");
-const moment = require('moment');
+const moment = require('moment-timezone');
 const Flatted = require('flatted');
 
 
@@ -33,8 +33,8 @@ module.exports.handler = async (event, context) => {
             const trackingResult = await allqueries(trackingparams);
             console.log("trackingResult:", trackingResult);
             if (trackingResult.Items.length === 0) {
-            console.error("No Location Updates found for orderNo:", orderNo);
-            continue;
+                console.error("No Location Updates found for orderNo:", orderNo);
+                continue;
             }
             const note = trackingResult.Items[0].Note.S;
             const lat = note.split('Latitude=')[1].split(' ')[0];
@@ -83,7 +83,7 @@ module.exports.handler = async (event, context) => {
                 }
             }
             const eventTimezone = milestoneResult.Items[0].EventTimeZone.S;
-            console.log("eventTimezone:",eventTimezone);            
+            console.log("eventTimezone:", eventTimezone);
             const headerparams = {
                 TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
                 Key: {
@@ -123,14 +123,14 @@ module.exports.handler = async (event, context) => {
                     ":code": { S: eventTimezone }
                 }
             };
-            console.log("timezoneparams:",timezoneparams);
+            console.log("timezoneparams:", timezoneparams);
             const timezoneResult = await allqueries(timezoneparams);
             if (timezoneResult.Items.length === 0) {
                 console.error(`timezoneResult have no values`);
                 continue;
-            }            
+            }
             const hoursaway = timezoneResult.Items[0].HoursAway.S;
-            const utcTimestamp = moment(eventDateTime).add(5 - hoursaway, 'hours').format('YYYY-MM-DDTHH:mm:ss');            
+            const utcTimestamp = moment(eventDateTime).add(5 - hoursaway, 'hours').format('YYYY-MM-DDTHH:mm:ss');
 
             // Construct the payload
             const payload = {
@@ -163,8 +163,8 @@ module.exports.handler = async (event, context) => {
             console.log("pushed payload to P44 Api successfully");
             console.log("p44Response", p44Response);
             // Inserted time stamp in (YYYY-MM-DDTHH:mm:ss) ISO format
-            let InsertedTimeStamp = new Date().toISOString(); 
-            InsertedTimeStamp = InsertedTimeStamp.slice(0, -5);
+            const InsertedTimeStamp = moment().tz('America/Chicago').format("YYYY-MM-DDTHH:mm:ss")
+
             // As json stringyfy is not supported for converting circular reference object to string
             // used Flatted npm package
             const jsonp44Response = Flatted.stringify(p44Response);
@@ -178,7 +178,7 @@ module.exports.handler = async (event, context) => {
                     p44ResponseCode: p44Response.status,
                     p44Payload: JSON.stringify(payload),
                     p44Response: jsonp44Response,          // Added json P44 response 
-                    InsertedTimeStamp                      
+                    InsertedTimeStamp
                 }
             };
             const result = await putItem(dynamoParams)
