@@ -4,7 +4,7 @@ const axios = require("axios");
 const { putItem, get, allqueries } = require("../shared/dynamo");
 const { run } = require("../shared/tokengenerator");
 const moment = require('moment');
-
+const Flatted = require('flatted');
 
 
 module.exports.handler = async (event, context) => {
@@ -162,6 +162,12 @@ module.exports.handler = async (event, context) => {
             );
             console.log("pushed payload to P44 Api successfully");
             console.log("p44Response", p44Response);
+            // Inserted time stamp in (YYYY-MM-DDTHH:mm:ss) ISO format
+            let InsertedTimeStamp = new Date().toISOString(); 
+            InsertedTimeStamp = InsertedTimeStamp.slice(0, -5);
+            // As json stringyfy is not supported for converting circular reference object to string
+            // used Flatted npm package
+            const jsonp44Response = Flatted.stringify(p44Response);
             // Save response code and payload in DynamoDB
             console.log(id, billOfLading);
             const dynamoParams = {
@@ -170,7 +176,9 @@ module.exports.handler = async (event, context) => {
                     UUID: id,
                     ReferenceNo: billOfLading,
                     p44ResponseCode: p44Response.status,
-                    p44Payload: JSON.stringify(payload)
+                    p44Payload: JSON.stringify(payload),
+                    p44Response: jsonp44Response,          // Added json P44 response 
+                    InsertedTimeStamp                      
                 }
             };
             const result = await putItem(dynamoParams)
