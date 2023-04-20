@@ -4,7 +4,8 @@ const axios = require("axios")
 const { mapStatus } = require("../shared/datamapping");
 const { putItem, allqueries, get } = require("../shared/dynamo")
 const { run } = require("../shared/tokengenerator")
-const moment = require('moment');
+const moment = require('moment-timezone');
+const Flatted = require('flatted');
 
 module.exports.handler = async (event, context) => {
 
@@ -135,15 +136,22 @@ module.exports.handler = async (event, context) => {
                 }
             );
             console.log("p44Response", p44Response)
+            // Inserted time stamp in CST format
+            const InsertedTimeStamp = moment().tz('America/Chicago').format("YYYY-MM-DDTHH:mm:ss")
             // Saving the response code and payload in DynamoDB
             console.log(id, billOfLading)
+            // As json stringyfy is not supported for converting circular reference object to string
+            // used Flatted npm package
+            const jsonp44Response = Flatted.stringify(p44Response);
             const milestoneparams = {
                 TableName: process.env.P44_MILESTONE_LOGS_TABLE_NAME,
                 Item: {
                     UUID: id,
                     ReferenceNo: billOfLading,
                     p44ResponseCode: p44Response.status,
-                    p44Payload: JSON.stringify(payload)
+                    p44Payload: JSON.stringify(payload),
+                    p44Response: jsonp44Response,          // Added json P44 response 
+                    InsertedTimeStamp
                 }
             };
             const result = await putItem(milestoneparams);
