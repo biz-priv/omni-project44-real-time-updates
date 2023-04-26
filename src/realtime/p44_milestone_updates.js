@@ -17,6 +17,7 @@ module.exports.handler = async (event, context) => {
         try {
             console.log('Processing record:', JSON.stringify(record));
             const body = JSON.parse(record.body);
+            // const body = (record.body);
             const newImage = body.NewImage;
             // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
             const orderNo = newImage.FK_OrderNo.S;
@@ -61,14 +62,40 @@ module.exports.handler = async (event, context) => {
             };
             console.log("headerparams:", headerparams)
             const headerResult = await get(headerparams);
+            if (headerResult.Item.length == 0) {
+                throw "headerResult have no values";
+            }
             console.log("headerResult:", headerResult)
-            console.log(!headerResult.Item.BillNo.S)
-            if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(headerResult.Item.BillNo.S)) {
-                console.log("BillNo:", headerResult.Item.BillNo)
-                console.error(`Skipping the record as the BillNo does not match  MCKESSON customer`);
+            const BillNo = headerResult.Item.BillNo.S;
+            console.log("BillNo:",BillNo)
+            // if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(headerResult.Item.BillNo.S)) {
+            //     console.log("BillNo:", headerResult.Item.BillNo)
+            //     console.error(`Skipping the record as the BillNo does not match  MCKESSON customer`);
+            //     continue;
+            // }
+            if (!headerResult.Item) {
+                console.error(`Skipping the record as headerResult.Item is falsy`);
                 continue;
             }
 
+            let found = false;
+            if ((process.env.MCKESSON_CUSTOMER_NUMBERS).includes(BillNo)) {
+                console.log(`This is MCKESSON_CUSTOMER_NUMBERS`);
+                found = true;
+            }
+            if ((process.env.JCPENNY_CUSTOMER_NUMBER).includes(BillNo)) {
+                console.log(`This is JCPENNY_CUSTOMER_NUMBER`);
+                found = true;
+            }
+            if ((process.env.IMS_CUSTOMER_NUMBER).includes(BillNo)) {
+                console.log(`This is IMS_CUSTOMER_NUMBER`);
+                found = true;
+            }
+
+            if (!found) {
+                console.error(`Skipping the record as the BillNo does not match with valid customer numbers`);
+                continue;
+            }
             // Querying the tracking notes table to get the eventDateTime
             const trackingparams = {
                 TableName: process.env.TRACKING_NOTES_TABLE_NAME,
