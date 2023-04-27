@@ -17,7 +17,6 @@ module.exports.handler = async (event, context) => {
         try {
             console.log('Processing record:', JSON.stringify(record));
             const body = JSON.parse(record.body);
-            // const body = (record.body);
             const newImage = body.NewImage;
             // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
             const orderNo = newImage.FK_OrderNo.S;
@@ -67,32 +66,26 @@ module.exports.handler = async (event, context) => {
             }
             console.log("headerResult:", headerResult)
             const BillNo = headerResult.Item.BillNo.S;
-            console.log("BillNo:",BillNo)
-            // if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(headerResult.Item.BillNo.S)) {
-            //     console.log("BillNo:", headerResult.Item.BillNo)
-            //     console.error(`Skipping the record as the BillNo does not match  MCKESSON customer`);
-            //     continue;
-            // }
+            console.log("BillNo:", BillNo)
+
             if (!headerResult.Item) {
                 console.error(`Skipping the record as headerResult.Item is falsy`);
                 continue;
             }
-
-            let found = false;
+            let customerId = "";
             if ((process.env.MCKESSON_CUSTOMER_NUMBERS).includes(BillNo)) {
                 console.log(`This is MCKESSON_CUSTOMER_NUMBERS`);
-                found = true;
+                customerId = "MCKESSON";
             }
             if ((process.env.JCPENNY_CUSTOMER_NUMBER).includes(BillNo)) {
                 console.log(`This is JCPENNY_CUSTOMER_NUMBER`);
-                found = true;
+                customerId = "JCPENNY";
             }
             if ((process.env.IMS_CUSTOMER_NUMBER).includes(BillNo)) {
                 console.log(`This is IMS_CUSTOMER_NUMBER`);
-                found = true;
+                customerId = "IMS";
             }
-
-            if (!found) {
+            if (customerId === "") {
                 console.error(`Skipping the record as the BillNo does not match with valid customer numbers`);
                 continue;
             }
@@ -143,7 +136,7 @@ module.exports.handler = async (event, context) => {
                 utcTimestamp: utcTimestamp,
                 latitude: "0",
                 longitude: "0",
-                customerId: "MCKESSON",
+                customerId: customerId,
                 eventStopNumber: mappedStatus.stopNumber,
                 eventType: mappedStatus.type
             };
