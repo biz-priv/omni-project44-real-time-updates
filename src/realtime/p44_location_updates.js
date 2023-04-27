@@ -98,10 +98,7 @@ module.exports.handler = async (event, context) => {
             console.log("headerResult:", headerResult);
             const BillNo = headerResult.Item.BillNo.S;
             console.log("BillNo:", BillNo);
-            // if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(BillNo)) {
-            //     console.error(`Skipping the record as the BillNo does not match MCKESSON customer`);
-            //     continue;
-            // }
+
             if (!headerResult.Item) {
                 console.error(`Skipping the record as headerResult.Item is falsy`);
                 continue;
