@@ -11,7 +11,7 @@ function:
       - "src/dynamoStreamToSns/trackingNotesStreamToSns.js"
       - "src/shared/**"
   events:
-    - stream: ${ssm:/omni-wt-rt-updates/dev/tracking-notes/ddb.streamArn~true}
+    - stream: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/tracking-notes/ddb.streamArn~true}
   environment:
-    SNS_TOPIC_ARN: ${ssm:/omni-wt-rt-updates/dev/tracking-notes/sns.arn~true}
-    DYNAMO_DB_TABLE: ${ssm:/omni-wt-rt-updates/dev/tracking-notes/ddb.tableName~true}
+    SNS_TOPIC_ARN: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/tracking-notes/sns.arn~true}
+    DYNAMO_DB_TABLE: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/tracking-notes/ddb.tableName~true}
