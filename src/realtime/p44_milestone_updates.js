@@ -65,30 +65,12 @@ module.exports.handler = async (event, context) => {
                 throw "headerResult have no values";
             }
             console.log("headerResult:", headerResult)
-            const BillNo = headerResult.Item.BillNo.S;
-            console.log("BillNo:", BillNo)
+            if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(headerResult.Item.BillNo.S)) {
+                console.log("BillNo:", headerResult.Item.BillNo)
+                console.error(`Skipping the record as the BillNo does not match  MCKESSON customer`);
+                continue;
+            }
 
-            if (!headerResult.Item) {
-                console.error(`Skipping the record as headerResult.Item is falsy`);
-                continue;
-            }
-            let customerId = "";
-            if ((process.env.MCKESSON_CUSTOMER_NUMBERS).includes(BillNo)) {
-                console.log(`This is MCKESSON_CUSTOMER_NUMBERS`);
-                customerId = "MCKESSON";
-            }
-            if ((process.env.JCPENNY_CUSTOMER_NUMBER).includes(BillNo)) {
-                console.log(`This is JCPENNY_CUSTOMER_NUMBER`);
-                customerId = "JCPENNY";
-            }
-            if ((process.env.IMS_CUSTOMER_NUMBER).includes(BillNo)) {
-                console.log(`This is IMS_CUSTOMER_NUMBER`);
-                customerId = "IMS";
-            }
-            if (customerId === "") {
-                console.error(`Skipping the record as the BillNo does not match with valid customer numbers`);
-                continue;
-            }
             // Querying the tracking notes table to get the eventDateTime
             const trackingparams = {
                 TableName: process.env.TRACKING_NOTES_TABLE_NAME,
@@ -136,7 +118,7 @@ module.exports.handler = async (event, context) => {
                 utcTimestamp: utcTimestamp,
                 latitude: "0",
                 longitude: "0",
-                customerId: customerId,
+                customerId: "MCKESSON",
                 eventStopNumber: mappedStatus.stopNumber,
                 eventType: mappedStatus.type
             };
