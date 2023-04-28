@@ -16,8 +16,12 @@ module.exports.handler = async (event, context) => {
         try {
             console.log('Processing record:', JSON.stringify(record));
             const body = JSON.parse(record.body);
+            // const body = (record.body);
             const newImage = body.NewImage;
             const orderNo = newImage.FK_OrderNo.S;
+            const note = newImage.Note.S;
+            console.log("note:",note);
+
             const trackingparams = {
                 TableName: process.env.TRACKING_NOTES_TABLE_NAME,
                 IndexName: process.env.TRACKING_NOTES_ORDERNO_INDEX,
@@ -35,12 +39,14 @@ module.exports.handler = async (event, context) => {
                 console.error("No Location Updates found for orderNo:", orderNo);
                 continue;
             }
-            const note = trackingResult.Items[0].Note.S;
-            const lat = note.split('Latitude=')[1].split(' ')[0];
-            const long = note.split('Longitude=')[1].split(' ')[0];
-            console.log("note:", note);
-            console.log("Latitude:", lat);
-            console.log("Longitude:", long);
+            // Extract latitude and longitude values from the note string using regular expressions
+            const latRegex = /Latitude=(-?\d+(\.\d+)?)/;
+            const longRegex = /Longitude=(-?\d+(\.\d+)?)/;
+            const latitude = latRegex.exec(note)[1];
+            const longitude = longRegex.exec(note)[1];
+            console.log("Latitude:", latitude);
+            console.log("Longitude:", longitude);
+
             const Params = {
                 TableName: process.env.REFERENCES_TABLE_NAME,
                 IndexName: process.env.REFERENCES_ORDERNO_INDEX,
@@ -94,7 +100,7 @@ module.exports.handler = async (event, context) => {
             const headerResult = await get(headerparams);
             if (headerResult.Item.length == 0) {
                 throw "headerResult have no values";
-            }    
+            }
             console.log("headerResult:", headerResult);
             const BillNo = headerResult.Item.BillNo.S;
             console.log("BillNo:", BillNo);
@@ -116,7 +122,8 @@ module.exports.handler = async (event, context) => {
             if (trackingnotesResult.Items.length == 0) {
                 throw "trackingnotesResult have no values";
             }
-            const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
+            // const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
+            const eventDateTime = newImage.EventDateTime.S;
             console.log("eventDateTime", eventDateTime);
             const timezoneparams = {
                 TableName: process.env.TIME_ZONE_TABLE_NAME,
@@ -142,13 +149,14 @@ module.exports.handler = async (event, context) => {
                         value: billOfLading
                     }
                 ],
-                latitude: lat,
-                longitude: long,
+                latitude: latitude,
+                longitude: longitude,
                 utcTimestamp: utcTimestamp,
                 customerId: "MCKESSON",
                 eventType: "POSITION"
             };
             console.log("payload:", payload);
+            return{}
             const getaccesstocken = await run();
             console.log("getaccesstocken", getaccesstocken);
             // Call P44 API with the constructed payload
