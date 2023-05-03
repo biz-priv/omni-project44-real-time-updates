@@ -183,7 +183,6 @@ module.exports.handler = async (event, context) => {
                 eventType: "POSITION"
             };
             console.log("payload:", payload);
-            return {}
             const getaccesstocken = await run();
             console.log("getaccesstocken", getaccesstocken);
             // Call P44 API with the constructed payload
