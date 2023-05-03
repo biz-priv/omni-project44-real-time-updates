@@ -45,7 +45,7 @@ module.exports.handler = async (event, context) => {
             const referenceResult = await allqueries(referenceparams);
             console.log("referenceResult", referenceResult)
             if (referenceResult.Items.length === 0) {
-                console.error(`No Bill of Lading found for order ${orderNo}`);
+                console.log(`No Bill of Lading found for order ${orderNo}`);
                 continue;
             }
             const referenceNo = referenceResult.Items[0].ReferenceNo.S;
@@ -62,12 +62,31 @@ module.exports.handler = async (event, context) => {
             console.log("headerparams:", headerparams)
             const headerResult = await get(headerparams);
             if (headerResult.Item.length == 0) {
-                throw "headerResult have no values";
+                console.log("headerResult have no values");
+                continue
             }
             console.log("headerResult:", headerResult)
-            if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(headerResult.Item.BillNo.S)) {
-                console.log("BillNo:", headerResult.Item.BillNo)
-                console.error(`Skipping the record as the BillNo does not match  MCKESSON customer`);
+            const BillNo = headerResult.Item.BillNo.S;
+            console.log("BillNo:", BillNo);
+            if (!headerResult.Item) {
+                console.log(`Skipping the record as headerResult.Item is falsy`);
+                continue;
+            }
+            let customerId = "";
+            if ((process.env.MCKESSON_CUSTOMER_NUMBERS).includes(BillNo)) {
+                console.log(`This is MCKESSON_CUSTOMER_NUMBERS`);
+                customerId = "MCKESSON";
+            }
+            if ((process.env.JCPENNY_CUSTOMER_NUMBER).includes(BillNo)) {
+                console.log(`This is JCPENNY_CUSTOMER_NUMBER`);
+                customerId = "JCPENNY";
+            }
+            if ((process.env.IMS_CUSTOMER_NUMBER).includes(BillNo)) {
+                console.log(`This is IMS_CUSTOMER_NUMBER`);
+                customerId = "IMS";
+            }
+            if (customerId === "") {
+                console.log(`Skipping the record as the BillNo does not match with valid customer numbers`);
                 continue;
             }
 
@@ -81,9 +100,10 @@ module.exports.handler = async (event, context) => {
                 }
             };
             const trackingnotesResult = await allqueries(trackingparams);
-            console.log("trackingnotesResult", JSON.stringify(trackingnotesResult))
+            console.log("trackingnotesResult", trackingnotesResult)
             if (trackingnotesResult.Items.length == 0) {
-                throw "trackingnotesResult have no values"
+                console.log("trackingnotesResult have no values");
+                continue;
             }
             const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
             const eventTimezone = newImage.EventTimeZone.S;
@@ -98,7 +118,7 @@ module.exports.handler = async (event, context) => {
             console.log("timezoneparams:", timezoneparams)
             const timezoneResult = await allqueries(timezoneparams);
             if (timezoneResult.Items.length === 0) {
-                console.error(`timezoneResult have no values`);
+                console.log(`timezoneResult have no values`);
                 continue;
             }
             const hoursaway = timezoneResult.Items[0].HoursAway.S;
@@ -118,7 +138,7 @@ module.exports.handler = async (event, context) => {
                 utcTimestamp: utcTimestamp,
                 latitude: "0",
                 longitude: "0",
-                customerId: "MCKESSON",
+                customerId: customerId,
                 eventStopNumber: mappedStatus.stopNumber,
                 eventType: mappedStatus.type
             };

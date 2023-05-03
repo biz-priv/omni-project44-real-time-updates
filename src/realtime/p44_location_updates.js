@@ -16,11 +16,10 @@ module.exports.handler = async (event, context) => {
         try {
             console.log('Processing record:', JSON.stringify(record));
             const body = JSON.parse(record.body);
-            // const body = (record.body);
             const newImage = body.NewImage;
             const orderNo = newImage.FK_OrderNo.S;
             const note = newImage.Note.S;
-            console.log("note:",note);
+            console.log("note:", note);
 
             const trackingparams = {
                 TableName: process.env.TRACKING_NOTES_TABLE_NAME,
@@ -36,16 +35,25 @@ module.exports.handler = async (event, context) => {
             const trackingResult = await allqueries(trackingparams);
             console.log("trackingResult:", trackingResult);
             if (trackingResult.Items.length === 0) {
-                console.error("No Location Updates found for orderNo:", orderNo);
+                console.log("No Location Updates found for orderNo:", orderNo);
                 continue;
             }
+            let latitude;
+            let longitude;
             // Extract latitude and longitude values from the note string using regular expressions
             const latRegex = /Latitude=(-?\d+(\.\d+)?)/;
             const longRegex = /Longitude=(-?\d+(\.\d+)?)/;
-            const latitude = latRegex.exec(note)[1];
-            const longitude = longRegex.exec(note)[1];
-            console.log("Latitude:", latitude);
-            console.log("Longitude:", longitude);
+            const latMatch = latRegex.exec(note);
+            const longMatch = longRegex.exec(note);
+            if (latMatch && longMatch) {
+                 latitude = latMatch[1];
+                 longitude = longMatch[1];
+                console.log("Latitude:", latitude);
+                console.log("Longitude:", longitude);
+            } else {
+                console.log("No Location Updates:", note);
+                continue;
+            }
 
             const Params = {
                 TableName: process.env.REFERENCES_TABLE_NAME,
@@ -62,7 +70,7 @@ module.exports.handler = async (event, context) => {
             const referenceResult = await allqueries(Params);
             console.log("referenceResult", referenceResult);
             if (referenceResult.Items.length === 0) {
-                console.error(`No Bill of Lading found for order ${orderNo}`);
+                console.log(`No Bill of Lading found for order ${orderNo}`);
                 continue;
             }
             const referenceNo = referenceResult.Items[0].ReferenceNo.S;
@@ -104,8 +112,26 @@ module.exports.handler = async (event, context) => {
             console.log("headerResult:", headerResult);
             const BillNo = headerResult.Item.BillNo.S;
             console.log("BillNo:", BillNo);
-            if (!headerResult.Item || !(process.env.MCKESSON_CUSTOMER_NUMBERS).includes(BillNo)) {
-                console.error(`Skipping the record as the BillNo does not match MCKESSON customer`);
+
+            if (!headerResult.Item) {
+                console.log(`Skipping the record as headerResult.Item is falsy`);
+                continue;
+            }
+            let customerId = "";
+            if ((process.env.MCKESSON_CUSTOMER_NUMBERS).includes(BillNo)) {
+                console.log(`This is MCKESSON_CUSTOMER_NUMBERS`);
+                customerId = "MCKESSON";
+            }
+            if ((process.env.JCPENNY_CUSTOMER_NUMBER).includes(BillNo)) {
+                console.log(`This is JCPENNY_CUSTOMER_NUMBER`);
+                customerId = "JCPENNY";
+            }
+            if ((process.env.IMS_CUSTOMER_NUMBER).includes(BillNo)) {
+                console.log(`This is IMS_CUSTOMER_NUMBER`);
+                customerId = "IMS";
+            }
+            if (customerId === "") {
+                console.log(`Skipping the record as the BillNo does not match with valid customer numbers`);
                 continue;
             }
 
@@ -120,7 +146,8 @@ module.exports.handler = async (event, context) => {
             };
             const trackingnotesResult = await allqueries(trackingnotesparams);
             if (trackingnotesResult.Items.length == 0) {
-                throw "trackingnotesResult have no values";
+                 console.log("trackingnotesResult have no values");
+                 continue;
             }
             // const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
             const eventDateTime = newImage.EventDateTime.S;
@@ -135,7 +162,7 @@ module.exports.handler = async (event, context) => {
             console.log("timezoneparams:", timezoneparams);
             const timezoneResult = await allqueries(timezoneparams);
             if (timezoneResult.Items.length === 0) {
-                console.error(`timezoneResult have no values`);
+                console.log(`timezoneResult have no values`);
                 continue;
             }
             const hoursaway = timezoneResult.Items[0].HoursAway.S;
@@ -152,11 +179,10 @@ module.exports.handler = async (event, context) => {
                 latitude: latitude,
                 longitude: longitude,
                 utcTimestamp: utcTimestamp,
-                customerId: "MCKESSON",
+                customerId: customerId,
                 eventType: "POSITION"
             };
             console.log("payload:", payload);
-            return{}
             const getaccesstocken = await run();
             console.log("getaccesstocken", getaccesstocken);
             // Call P44 API with the constructed payload
