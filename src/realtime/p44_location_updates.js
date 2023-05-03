@@ -35,7 +35,7 @@ module.exports.handler = async (event, context) => {
             const trackingResult = await allqueries(trackingparams);
             console.log("trackingResult:", trackingResult);
             if (trackingResult.Items.length === 0) {
-                console.error("No Location Updates found for orderNo:", orderNo);
+                console.log("No Location Updates found for orderNo:", orderNo);
                 continue;
             }
             let latitude;
@@ -70,7 +70,7 @@ module.exports.handler = async (event, context) => {
             const referenceResult = await allqueries(Params);
             console.log("referenceResult", referenceResult);
             if (referenceResult.Items.length === 0) {
-                console.error(`No Bill of Lading found for order ${orderNo}`);
+                console.log(`No Bill of Lading found for order ${orderNo}`);
                 continue;
             }
             const referenceNo = referenceResult.Items[0].ReferenceNo.S;
@@ -114,7 +114,7 @@ module.exports.handler = async (event, context) => {
             console.log("BillNo:", BillNo);
 
             if (!headerResult.Item) {
-                console.error(`Skipping the record as headerResult.Item is falsy`);
+                console.log(`Skipping the record as headerResult.Item is falsy`);
                 continue;
             }
             let customerId = "";
@@ -131,7 +131,7 @@ module.exports.handler = async (event, context) => {
                 customerId = "IMS";
             }
             if (customerId === "") {
-                console.error(`Skipping the record as the BillNo does not match with valid customer numbers`);
+                console.log(`Skipping the record as the BillNo does not match with valid customer numbers`);
                 continue;
             }
 
@@ -146,7 +146,8 @@ module.exports.handler = async (event, context) => {
             };
             const trackingnotesResult = await allqueries(trackingnotesparams);
             if (trackingnotesResult.Items.length == 0) {
-                throw "trackingnotesResult have no values";
+                 console.log("trackingnotesResult have no values");
+                 continue;
             }
             // const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
             const eventDateTime = newImage.EventDateTime.S;
@@ -161,7 +162,7 @@ module.exports.handler = async (event, context) => {
             console.log("timezoneparams:", timezoneparams);
             const timezoneResult = await allqueries(timezoneparams);
             if (timezoneResult.Items.length === 0) {
-                console.error(`timezoneResult have no values`);
+                console.log(`timezoneResult have no values`);
                 continue;
             }
             const hoursaway = timezoneResult.Items[0].HoursAway.S;
