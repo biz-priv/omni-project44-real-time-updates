@@ -1,7 +1,7 @@
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require('uuid');
 const axios = require("axios");
-const { putItem, get, allqueries } = require("../shared/dynamo");
+const { putItem, allqueries } = require("../shared/dynamo");
 const { run } = require("../shared/tokengenerator");
 const moment = require('moment-timezone');
 const Flatted = require('flatted');
@@ -199,7 +199,6 @@ module.exports.handler = async (event, context) => {
                 eventType: "POSITION"
             };
             console.log("payload:", payload);
-            return {}
             const getaccesstocken = await run();
             console.log("getaccesstocken", getaccesstocken);
             // Call P44 API with the constructed payload
