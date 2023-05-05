@@ -2,7 +2,7 @@ const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require('uuid');
 const axios = require("axios")
 const { mapStatus } = require("../shared/datamapping");
-const { putItem, allqueries, get } = require("../shared/dynamo")
+const { putItem, allqueries } = require("../shared/dynamo")
 const { run } = require("../shared/tokengenerator")
 const moment = require('moment-timezone');
 const Flatted = require('flatted');
@@ -29,46 +29,30 @@ module.exports.handler = async (event, context) => {
                 console.log(`Skipping record with order status ${orderStatusId}`);
                 continue;
             }
-
-            const referenceparams = {
-                TableName: process.env.REFERENCES_TABLE_NAME,
-                IndexName: process.env.REFERENCES_ORDERNO_INDEX,
-                KeyConditionExpression: `FK_OrderNo = :orderNo`,
-                FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
-                ExpressionAttributeValues: {
-                    ":orderNo": { S: orderNo },
-                    ":customerType": { S: "B" },
-                    ":refType": { S: "BOL" }
-                },
-            };
-            console.log("referenceparams:", referenceparams)
-            const referenceResult = await allqueries(referenceparams);
-            console.log("referenceResult", referenceResult)
-            if (referenceResult.Items.length === 0) {
-                console.log(`No Bill of Lading found for order ${orderNo}`);
-                continue;
-            }
-            const referenceNo = referenceResult.Items[0].ReferenceNo.S;
-            console.log('ReferenceNo:', referenceNo);
-            const billOfLading = referenceNo;
             // Checking whether the Bill belongs to MCKESSON customer
             const headerparams = {
                 TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
-                Key: {
-                    PK_OrderNo: { S: orderNo }
+                KeyConditionExpression: `PK_OrderNo = :orderNo`,
+                ExpressionAttributeValues: {
+                    ":orderNo": { S: orderNo },
                 },
-                ProjectionExpression: "BillNo"
             };
             console.log("headerparams:", headerparams)
-            const headerResult = await get(headerparams);
-            if (headerResult.Item.length == 0) {
+            const headerResult = await allqueries(headerparams);
+            const items = headerResult.Items;
+            let BillNo;
+            let houseBill;
+            if (items && items.length > 0) {
+                BillNo = items[0].BillNo.S;
+                houseBill = items[0].Housebill.S;
+                console.log("BillNo:", BillNo);
+                console.log("Housebill:", houseBill);
+            } else {
                 console.log("headerResult have no values");
-                continue
+                continue;
             }
-            console.log("headerResult:", headerResult)
-            const BillNo = headerResult.Item.BillNo.S;
-            console.log("BillNo:", BillNo);
-            if (!headerResult.Item) {
+
+            if (!headerResult.Items) {
                 console.log(`Skipping the record as headerResult.Item is falsy`);
                 continue;
             }
@@ -89,6 +73,38 @@ module.exports.handler = async (event, context) => {
                 console.log(`Skipping the record as the BillNo does not match with valid customer numbers`);
                 continue;
             }
+
+            let billOfLading
+            let referenceNo;
+            if (customerId === 'MCKESSON' || customerId === 'JCPENNY') {
+                const referenceparams = {
+                    TableName: process.env.REFERENCES_TABLE_NAME,
+                    IndexName: process.env.REFERENCES_ORDERNO_INDEX,
+                    KeyConditionExpression: `FK_OrderNo = :orderNo`,
+                    FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
+                    ExpressionAttributeValues: {
+                        ":orderNo": { S: orderNo },
+                        ":customerType": { S: "B" },
+                        ":refType": { S: "BOL" }
+                    },
+                };
+                console.log("referenceparams:", referenceparams)
+                const referenceResult = await allqueries(referenceparams);
+                console.log("referenceResult", referenceResult)
+                if (referenceResult.Items.length === 0) {
+                    console.log(`No Bill of Lading found for order ${orderNo}`);
+                } else {
+                    referenceNo = referenceResult.Items[0].ReferenceNo.S;
+                    console.log('ReferenceNo:', referenceNo);
+                }
+            }
+            if (customerId == "IMS") {
+                billOfLading = houseBill
+            } else {
+                billOfLading = referenceNo;
+            }
+            console.log("billOfLading", billOfLading);
+
 
             // Querying the tracking notes table to get the eventDateTime
             const trackingparams = {
@@ -143,6 +159,7 @@ module.exports.handler = async (event, context) => {
                 eventType: mappedStatus.type
             };
             console.log("payload:", payload)
+            return {}
             // generating token with P44 oauth API 
             const getaccesstocken = await run()
             console.log("getaccesstocken", getaccesstocken)
