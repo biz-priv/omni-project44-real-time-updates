@@ -1,7 +1,7 @@
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require('uuid');
 const axios = require("axios");
-const { putItem, get, allqueries } = require("../shared/dynamo");
+const { putItem, allqueries } = require("../shared/dynamo");
 const { run } = require("../shared/tokengenerator");
 const moment = require('moment-timezone');
 const Flatted = require('flatted');
@@ -46,8 +46,8 @@ module.exports.handler = async (event, context) => {
             const latMatch = latRegex.exec(note);
             const longMatch = longRegex.exec(note);
             if (latMatch && longMatch) {
-                 latitude = latMatch[1];
-                 longitude = longMatch[1];
+                latitude = latMatch[1];
+                longitude = longMatch[1];
                 console.log("Latitude:", latitude);
                 console.log("Longitude:", longitude);
             } else {
@@ -55,65 +55,29 @@ module.exports.handler = async (event, context) => {
                 continue;
             }
 
-            const Params = {
-                TableName: process.env.REFERENCES_TABLE_NAME,
-                IndexName: process.env.REFERENCES_ORDERNO_INDEX,
-                KeyConditionExpression: `FK_OrderNo = :orderNo`,
-                FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
-                ExpressionAttributeValues: {
-                    ":orderNo": { S: orderNo },
-                    ":customerType": { S: "B" },
-                    ":refType": { S: "BOL" }
-                },
-            };
-            console.log("Params", Params);
-            const referenceResult = await allqueries(Params);
-            console.log("referenceResult", referenceResult);
-            if (referenceResult.Items.length === 0) {
-                console.log(`No Bill of Lading found for order ${orderNo}`);
-                continue;
-            }
-            const referenceNo = referenceResult.Items[0].ReferenceNo.S;
-            console.log('ReferenceNo:', referenceNo);
-            const billOfLading = referenceNo;
-
-            const milestoneparams = {
-                TableName: process.env.SHIPMENT_MILESTONE_TABLE_NAME,
-                KeyConditionExpression: `FK_OrderNo = :orderNo`,
-                ExpressionAttributeValues: {
-                    ":orderNo": { S: orderNo },
-                },
-            };
-            console.log("milestoneparams:", milestoneparams);
-            const milestoneResult = await allqueries(milestoneparams);
-            for (let i = 0; i < milestoneResult.Items.length; i++) {
-                let fkOrderNo = milestoneResult.Items[i].FK_OrderNo.S;
-                if (fkOrderNo == orderNo) {
-                    console.log("Order numbers matched");
-                } else {
-                    console.log("Order numbers do not match");
-                    break;
-                }
-            }
-            const eventTimezone = milestoneResult.Items[0].EventTimeZone.S;
-            console.log("eventTimezone:", eventTimezone);
             const headerparams = {
                 TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
-                Key: {
-                    PK_OrderNo: { S: orderNo }
+                KeyConditionExpression: `PK_OrderNo = :orderNo`,
+                ExpressionAttributeValues: {
+                    ":orderNo": { S: orderNo },
                 },
-                ProjectionExpression: "BillNo"
             };
-            console.log("headerparams:", headerparams);
-            const headerResult = await get(headerparams);
-            if (headerResult.Item.length == 0) {
-                throw "headerResult have no values";
+            console.log("headerparams:", headerparams)
+            const headerResult = await allqueries(headerparams);
+            const items = headerResult.Items;
+            let BillNo;
+            let houseBill;
+            if (items && items.length > 0) {
+                BillNo = items[0].BillNo.S;
+                houseBill = items[0].Housebill.S;
+                console.log("BillNo:", BillNo);
+                console.log("Housebill:", houseBill);
+            } else {
+                console.log("headerResult have no values");
+                continue;
             }
-            console.log("headerResult:", headerResult);
-            const BillNo = headerResult.Item.BillNo.S;
             console.log("BillNo:", BillNo);
-
-            if (!headerResult.Item) {
+            if (!headerResult.Items) {
                 console.log(`Skipping the record as headerResult.Item is falsy`);
                 continue;
             }
@@ -135,6 +99,58 @@ module.exports.handler = async (event, context) => {
                 continue;
             }
 
+            let billOfLading
+            let referenceNo;
+            if (customerId === 'MCKESSON' || customerId === 'JCPENNY') {
+                const referenceparams = {
+                    TableName: process.env.REFERENCES_TABLE_NAME,
+                    IndexName: process.env.REFERENCES_ORDERNO_INDEX,
+                    KeyConditionExpression: `FK_OrderNo = :orderNo`,
+                    FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
+                    ExpressionAttributeValues: {
+                        ":orderNo": { S: orderNo },
+                        ":customerType": { S: "B" },
+                        ":refType": { S: "BOL" }
+                    },
+                };
+                console.log("referenceparams:", referenceparams)
+                const referenceResult = await allqueries(referenceparams);
+                console.log("referenceResult", referenceResult)
+                if (referenceResult.Items.length === 0) {
+                    console.log(`No Bill of Lading found for order ${orderNo}`);
+                } else {
+                    referenceNo = referenceResult.Items[0].ReferenceNo.S;
+                    console.log('ReferenceNo:', referenceNo);
+                }
+            }
+            if (customerId == "IMS") {
+                billOfLading = houseBill
+            } else {
+                billOfLading = referenceNo;
+            }
+            console.log("billOfLading", billOfLading);
+
+            const milestoneparams = {
+                TableName: process.env.SHIPMENT_MILESTONE_TABLE_NAME,
+                KeyConditionExpression: `FK_OrderNo = :orderNo`,
+                ExpressionAttributeValues: {
+                    ":orderNo": { S: orderNo },
+                },
+            };
+            console.log("milestoneparams:", milestoneparams);
+            const milestoneResult = await allqueries(milestoneparams);
+            for (let i = 0; i < milestoneResult.Items.length; i++) {
+                let fkOrderNo = milestoneResult.Items[i].FK_OrderNo.S;
+                if (fkOrderNo == orderNo) {
+                    console.log("Order numbers matched");
+                } else {
+                    console.log("Order numbers do not match");
+                    break;
+                }
+            }
+            const eventTimezone = milestoneResult.Items[0].EventTimeZone.S;
+            console.log("eventTimezone:", eventTimezone);
+
             // Query the tracking notes table to get the eventDateTime
             const trackingnotesparams = {
                 TableName: process.env.TRACKING_NOTES_TABLE_NAME,
@@ -146,8 +162,8 @@ module.exports.handler = async (event, context) => {
             };
             const trackingnotesResult = await allqueries(trackingnotesparams);
             if (trackingnotesResult.Items.length == 0) {
-                 console.log("trackingnotesResult have no values");
-                 continue;
+                console.log("trackingnotesResult have no values");
+                continue;
             }
             // const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
             const eventDateTime = newImage.EventDateTime.S;
