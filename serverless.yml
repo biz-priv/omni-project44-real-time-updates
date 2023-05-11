@@ -31,11 +31,7 @@ provider:
     - Effect: "Allow"
       Action:
         - "sqs:*"
-      Resource: "*"
-    - Effect: "Allow"
-      Action:
-        - "SNS:Publish"
-      Resource: "*"      
+      Resource: "*"   
  
   environment:
     REGION: ${self:custom.region}
@@ -69,9 +65,6 @@ functions:
   #realtime
   p44MilestoneUpdate: ${file(config/functions/realtime/p44MilestoneUpdate.yml):function}
   p44LocationUpdate: ${file(config/functions/realtime/p44LocationUpdate.yml):function}
-
-  #dynamoStreamToSns
-  trackingNotesStreamToSns: ${file(config/functions/dynamoStreamToSns/trackingNotesStreamToSns.yml):function}  
   
 resources:
   Resources:
@@ -81,8 +74,6 @@ resources:
     P44Subscription: ${file(config/queues/p44TargetQueue.yml):P44Subscription}
     P44TargetQueuePolicy: ${file(config/queues/p44TargetQueue.yml):P44TargetQueuePolicy}
 
-    TrackingNotesTopic: ${file(config/sns/trackingNotesSns.yml):TrackingNotesTopic}
-    P44TrackingNotesSubscription: ${file(config/sns/trackingNotesSns.yml):P44TrackingNotesSubscription}
     P44LocationUpdatesQueue: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueue}
     P44LocationUpdatesDLQ: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesDLQ}
     P44LocationUpdatesQueuePolicy: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueuePolicy}
