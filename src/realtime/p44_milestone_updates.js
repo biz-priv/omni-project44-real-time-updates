@@ -61,10 +61,6 @@ module.exports.handler = async (event, context) => {
                 console.log(`This is MCKESSON_CUSTOMER_NUMBERS`);
                 customerId = "MCKESSON";
             }
-            if ((process.env.JCPENNY_CUSTOMER_NUMBER).includes(BillNo)) {
-                console.log(`This is JCPENNY_CUSTOMER_NUMBER`);
-                customerId = "JCPENNY";
-            }
             if ((process.env.IMS_CUSTOMER_NUMBER).includes(BillNo)) {
                 console.log(`This is IMS_CUSTOMER_NUMBER`);
                 customerId = "IMS";
@@ -76,7 +72,7 @@ module.exports.handler = async (event, context) => {
 
             let billOfLading
             let referenceNo;
-            if (customerId === 'MCKESSON' || customerId === 'JCPENNY') {
+            if (customerId === 'MCKESSON') {
                 const referenceparams = {
                     TableName: process.env.REFERENCES_TABLE_NAME,
                     IndexName: process.env.REFERENCES_ORDERNO_INDEX,
