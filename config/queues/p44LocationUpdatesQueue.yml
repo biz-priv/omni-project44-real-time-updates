@@ -29,5 +29,5 @@ P44LocationUpdatesQueuePolicy:
           Condition:
             "ForAnyValue:ArnEquals":
               aws:SourceArn:
-                - !Ref TrackingNotesTopic
+                - ${ssm:/omni-wt-rt-updates/${self:provider.stage}/tracking-notes/sns.arn~true}
 
