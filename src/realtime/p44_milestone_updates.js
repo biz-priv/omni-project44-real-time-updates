@@ -95,29 +95,33 @@ module.exports.handler = async (event, context) => {
                 }
             }
             if (customerId == "IMS") {
-                billOfLading = houseBill
-            } else {
-                billOfLading = referenceNo;
+
+                const referenceparams = {
+                    TableName: process.env.REFERENCES_TABLE_NAME,
+                    IndexName: process.env.REFERENCES_ORDERNO_INDEX,
+                    KeyConditionExpression: `FK_OrderNo = :orderNo`,
+                    FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
+                    ExpressionAttributeValues: {
+                        ":orderNo": { S: orderNo },
+                        ":customerType": { S: "B" },
+                        ":refType": { S: "LOA" }
+                    },
+                };
+                console.log("referenceparams:", referenceparams)
+                const referenceResult = await allqueries(referenceparams);
+                console.log("referenceResult", referenceResult)
+                if (referenceResult.Items.length === 0) {
+                    console.log(`No Bill of Lading found for order ${orderNo}`);
+                } else {
+                    referenceNo = referenceResult.Items[0].ReferenceNo.S;
+                    console.log('ReferenceNo:', referenceNo);
+                }
             }
+            billOfLading = referenceNo;
             console.log("billOfLading", billOfLading);
 
-
-            // Querying the tracking notes table to get the eventDateTime
-            const trackingparams = {
-                TableName: process.env.TRACKING_NOTES_TABLE_NAME,
-                IndexName: process.env.TRACKING_NOTES_ORDERNO_INDEX,
-                KeyConditionExpression: `FK_OrderNo = :orderNo`,
-                ExpressionAttributeValues: {
-                    ":orderNo": { S: orderNo }
-                }
-            };
-            const trackingnotesResult = await allqueries(trackingparams);
-            console.log("trackingnotesResult", trackingnotesResult)
-            if (trackingnotesResult.Items.length == 0) {
-                console.log("trackingnotesResult have no values");
-                continue;
-            }
-            const eventDateTime = trackingnotesResult.Items[0].EventDateTime.S;
+            const eventDateTime = newImage.EventDateTime.S
+            console.log("eventDateTime:", eventDateTime);
             const eventTimezone = newImage.EventTimeZone.S;
             console.log("eventTimezone", eventTimezone)
             const timezoneparams = {
@@ -157,7 +161,6 @@ module.exports.handler = async (event, context) => {
             console.log("payload:", payload)
             // generating token with P44 oauth API 
             const getaccesstocken = await run()
-            console.log("getaccesstocken", getaccesstocken)
             // Calling P44 API with the constructed payload
             const p44Response = await axios.post(
                 process.env.P44_STATUS_UPDATES_API,
