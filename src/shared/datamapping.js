@@ -17,6 +17,11 @@ async function mapStatus(validStatusCodes) {
           type: 'DEPARTED',
           stopNumber: 1
         };
+        case 'PUP':
+          return {
+            type: 'DEPARTED',
+            stopNumber: 1
+          };
       case 'AAD':
         return {
           type: 'UNLOADING',
