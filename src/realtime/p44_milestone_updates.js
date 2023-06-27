@@ -116,8 +116,6 @@ module.exports.handler = async (event, context) => {
                 }
             }
             billOfLading = referenceNo;
-            console.log("billOfLading:", billOfLading);
-
             const eventDateTime = newImage.EventDateTime.S
             console.log("eventDateTime:", eventDateTime);
             const eventTimezone = newImage.EventTimeZone.S;
