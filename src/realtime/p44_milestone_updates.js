@@ -24,7 +24,7 @@ module.exports.handler = async (event, context) => {
 
 
             // Check whether the order status is valid
-            const validStatusCodes = ["APL", "TTC", "COB", "AAD", "DEL", "CAN"];
+            const validStatusCodes = ["APL", "TTC", "COB", "PUP", "AAD", "DEL", "CAN"];
             if (!validStatusCodes.includes(orderStatusId)) {
                 console.log(`Skipping record with order status ${orderStatusId}`);
                 continue;
@@ -91,7 +91,6 @@ module.exports.handler = async (event, context) => {
                     console.log(`No Bill of Lading found for order ${orderNo}`);
                 } else {
                     referenceNo = referenceResult.Items[0].ReferenceNo.S;
-                    console.log('ReferenceNo:', referenceNo);
                 }
             }
             if (customerId == "IMS") {
@@ -114,12 +113,9 @@ module.exports.handler = async (event, context) => {
                     console.log(`No Bill of Lading found for order ${orderNo}`);
                 } else {
                     referenceNo = referenceResult.Items[0].ReferenceNo.S;
-                    console.log('ReferenceNo:', referenceNo);
                 }
             }
             billOfLading = referenceNo;
-            console.log("billOfLading", billOfLading);
-
             const eventDateTime = newImage.EventDateTime.S
             console.log("eventDateTime:", eventDateTime);
             const eventTimezone = newImage.EventTimeZone.S;
