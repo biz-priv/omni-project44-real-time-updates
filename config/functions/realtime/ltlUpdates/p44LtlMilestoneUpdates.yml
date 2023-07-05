@@ -1,0 +1,30 @@
+---
+function:
+  name: omni-dw-project44-milestone-ltl-update-${self:provider.stage}
+  handler: src/realtime/ltlUpdates/p44_ltl_milestone_updates.handler
+  memorySize: 1024
+  timeout: 90
+  layers:
+    - { Ref: P44RtLambdaLayerLambdaLayer }
+  package:
+    patterns:
+      - "!**/*"
+      - "src/realtime/ltlUpdates/p44_ltl_milestone_updates.js"
+      - "src/shared/**"
+  events:
+    - sqs:
+        arn: { "Fn::GetAtt": ["P44TargetQueue", "Arn"] }
+        batchSize: 10
+        functionResponseType: ReportBatchItemFailures
+
+  environment:      
+    REFERENCES_TABLE_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/references/ddb.tableName~true} 
+    SHIPMENT_HEADER_TABLE_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-header/ddb.tableName~true}
+    P44_MILESTONE_LOGS_TABLE_NAME: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/milestone-update/ddb.tableName~true}
+    IMS_CUSTOMER_NUMBER: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/ims-customer/number}
+    # JCPENNY_CUSTOMER_NUMBER: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/jcpenny-customer/number} # can be used later
+    REFERENCES_ORDERNO_INDEX: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/references/ddb.orderNoIndex}
+    P44_LTL_STATUS_UPDATES_API: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/api/ltlStatusUpdates}      
+    P44_CLIENT_ID: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/p44-credentials/clientId}
+    P44_CLIENT_SECRET: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/p44-credentials/clientSecret}
+    P44_AUTH_API: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/authApi.url}
