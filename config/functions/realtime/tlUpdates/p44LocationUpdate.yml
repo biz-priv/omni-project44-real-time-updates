@@ -1,16 +1,15 @@
 ---
 function:
   name: omni-dw-project44-tl-location-update-${self:provider.stage}
-  handler: src/realtime/p44_location_updates.handler
+  handler: src/realtime/tlUpdates/p44_location_updates.handler
   memorySize: 1024
   timeout: 90
-  
   layers:
     - { Ref: P44RtLambdaLayerLambdaLayer }
   package:
     patterns:
       - "!**/*"
-      - "src/realtime/p44_location_updates.js"
+      - "src/realtime/tlUpdates/p44_location_updates.js"
       - "src/shared/**"
   events:
     - sqs:
