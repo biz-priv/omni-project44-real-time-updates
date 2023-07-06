@@ -7,7 +7,6 @@ provider:
   versionFunctions: false
   tags: ${self:custom.tags}
   stackTags: ${self:custom.tags}
-  runtime: nodejs18.x
   iamRoleStatements: # default vpc lambda permissions
     - Effect: "Allow"
       Action:
