@@ -4,6 +4,7 @@ function:
   handler: src/realtime/ltlUpdates/p44_ltl_milestone_updates.handler
   memorySize: 1024
   timeout: 90
+  runtime: nodejs18.x
   layers:
     - { Ref: P44RtLambdaLayerLambdaLayer }
   package:
