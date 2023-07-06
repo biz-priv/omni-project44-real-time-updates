@@ -29,7 +29,7 @@ module.exports.handler = async (event, context) => {
                 console.log(`Skipping record with order status ${orderStatusId}`);
                 continue;
             }
-            // Checking whether the Bill belongs to MCKESSON customer
+            // Checking whether the Billno's belongs to MCKESSON customer
             const headerparams = {
                 TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
                 KeyConditionExpression: `PK_OrderNo = :orderNo`,
@@ -61,10 +61,6 @@ module.exports.handler = async (event, context) => {
                 console.log(`This is MCKESSON_CUSTOMER_NUMBERS`);
                 customerId = "MCKESSON";
             }
-            if ((process.env.IMS_CUSTOMER_NUMBER).includes(BillNo)) {
-                console.log(`This is IMS_CUSTOMER_NUMBER`);
-                customerId = "IMS";
-            }
             if (customerId === "") {
                 console.log(`Skipping the record as the BillNo does not match with valid customer numbers`);
                 continue;
@@ -72,49 +68,26 @@ module.exports.handler = async (event, context) => {
 
             let billOfLading
             let referenceNo;
-            if (customerId === 'MCKESSON') {
-                const referenceparams = {
-                    TableName: process.env.REFERENCES_TABLE_NAME,
-                    IndexName: process.env.REFERENCES_ORDERNO_INDEX,
-                    KeyConditionExpression: `FK_OrderNo = :orderNo`,
-                    FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
-                    ExpressionAttributeValues: {
-                        ":orderNo": { S: orderNo },
-                        ":customerType": { S: "B" },
-                        ":refType": { S: "BOL" }
-                    },
-                };
-                console.log("referenceparams:", referenceparams)
-                const referenceResult = await allqueries(referenceparams);
-                console.log("referenceResult", referenceResult)
-                if (referenceResult.Items.length === 0) {
-                    console.log(`No Bill of Lading found for order ${orderNo}`);
-                } else {
-                    referenceNo = referenceResult.Items[0].ReferenceNo.S;
-                }
+            const referenceparams = {
+                TableName: process.env.REFERENCES_TABLE_NAME,
+                IndexName: process.env.REFERENCES_ORDERNO_INDEX,
+                KeyConditionExpression: `FK_OrderNo = :orderNo`,
+                FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
+                ExpressionAttributeValues: {
+                    ":orderNo": { S: orderNo },
+                    ":customerType": { S: "B" },
+                    ":refType": { S: "BOL" }
+                },
+            };
+            console.log("referenceparams:", referenceparams)
+            const referenceResult = await allqueries(referenceparams);
+            console.log("referenceResult", referenceResult)
+            if (referenceResult.Items.length === 0) {
+                console.log(`No Bill of Lading found for order ${orderNo}`);
+            } else {
+                referenceNo = referenceResult.Items[0].ReferenceNo.S;
             }
-            if (customerId == "IMS") {
 
-                const referenceparams = {
-                    TableName: process.env.REFERENCES_TABLE_NAME,
-                    IndexName: process.env.REFERENCES_ORDERNO_INDEX,
-                    KeyConditionExpression: `FK_OrderNo = :orderNo`,
-                    FilterExpression: 'CustomerType = :customerType and FK_RefTypeId = :refType',
-                    ExpressionAttributeValues: {
-                        ":orderNo": { S: orderNo },
-                        ":customerType": { S: "B" },
-                        ":refType": { S: "LOA" }
-                    },
-                };
-                console.log("referenceparams:", referenceparams)
-                const referenceResult = await allqueries(referenceparams);
-                console.log("referenceResult", referenceResult)
-                if (referenceResult.Items.length === 0) {
-                    console.log(`No Bill of Lading found for order ${orderNo}`);
-                } else {
-                    referenceNo = referenceResult.Items[0].ReferenceNo.S;
-                }
-            }
             billOfLading = referenceNo;
             const eventDateTime = newImage.EventDateTime.S
             console.log("eventDateTime:", eventDateTime);
@@ -127,7 +100,6 @@ module.exports.handler = async (event, context) => {
                     ":code": { S: eventTimezone }
                 }
             };
-            console.log("timezoneparams:", timezoneparams)
             const timezoneResult = await allqueries(timezoneparams);
             if (timezoneResult.Items.length === 0) {
                 console.log(`timezoneResult have no values`);
