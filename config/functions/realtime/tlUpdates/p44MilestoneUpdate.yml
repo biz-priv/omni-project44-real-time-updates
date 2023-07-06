@@ -1,7 +1,7 @@
 ---
 function:
   name: omni-dw-project44-milestone-update-${self:provider.stage}
-  handler: src/realtime/p44_milestone_updates.handler
+  handler: src/realtime/tlUpdates/p44_milestone_updates.handler
   memorySize: 1024
   timeout: 90
   
@@ -10,7 +10,7 @@ function:
   package:
     patterns:
       - "!**/*"
-      - "src/realtime/p44_milestone_updates.js"
+      - "src/realtime/tlUpdates/p44_milestone_updates.js"
       - "src/shared/**"
   events:
     - sqs:
