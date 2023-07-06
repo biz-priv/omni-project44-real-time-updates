@@ -78,3 +78,8 @@ resources:
     P44LocationUpdatesQueue: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueue}
     P44LocationUpdatesDLQ: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesDLQ}
     P44LocationUpdatesQueuePolicy: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueuePolicy}
+
+    P44MilestoneUpdatesQueue: ${file(config/queues/p44LtlMilestoneUpdatesQueue.yml):P44MilestoneUpdatesQueue}
+    P44MilestoneUpdatesDLQ: ${file(config/queues/p44LtlMilestoneUpdatesQueue.yml):P44MilestoneUpdatesDLQ}
+    P44MilestoneUpdatesSubscription: ${file(config/queues/p44LtlMilestoneUpdatesQueue.yml):P44MilestoneUpdatesSubscription}
+    P44MilestoneUpdatesQueuePolicy: ${file(config/queues/p44LtlMilestoneUpdatesQueue.yml):P44MilestoneUpdatesQueuePolicy}
