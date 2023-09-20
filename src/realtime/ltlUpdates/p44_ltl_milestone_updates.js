@@ -56,7 +56,7 @@ module.exports.handler = async (event, context) => {
             let customerName = "";
             if ((process.env.IMS_CUSTOMER_NUMBER).includes(BillNo)) {
                 console.log(`This is IMS_CUSTOMER_NUMBER`);
-                customerName = "1679664480957";
+                customerName = process.env.IMS_ACCOUNT_IDENTIFIER;
             }
             if (customerName === "") {
                 console.log(`Skipping the record as the BillNo does not match with valid customer numbers`);
