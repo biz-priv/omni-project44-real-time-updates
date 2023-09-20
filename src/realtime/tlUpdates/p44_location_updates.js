@@ -1,8 +1,8 @@
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require('uuid');
 const axios = require("axios");
-const { putItem, allqueries } = require("../shared/dynamo");
-const { run } = require("../shared/tokengenerator");
+const { putItem, allqueries } = require("../../shared/dynamo");
+const { run } = require("../../shared/tokengenerator");
 const moment = require('moment-timezone');
 const Flatted = require('flatted');
 

@@ -1,0 +1,43 @@
+P44MilestoneUpdatesDLQ:
+  Type: AWS::SQS::Queue
+  Properties:
+    QueueName: omni-project44-milestone-ltl-updates-DLQ-${self:provider.stage}
+
+P44MilestoneUpdatesQueue:
+  Type: "AWS::SQS::Queue"
+  Properties:
+    QueueName: omni-project44-milestone-ltl-updates-queue-${self:provider.stage}
+    VisibilityTimeout: 300
+    RedrivePolicy:
+      deadLetterTargetArn: !GetAtt P44MilestoneUpdatesDLQ.Arn
+      maxReceiveCount: 3
+
+P44MilestoneUpdatesQueuePolicy:
+  Type: AWS::SQS::QueuePolicy
+  Properties:
+    Queues:
+      - !Ref P44MilestoneUpdatesQueue
+    PolicyDocument:
+      Version: "2012-10-17"
+      Statement:
+        - Sid: "Allow SNS publish to SQS"
+          Effect: Allow
+          Principal:
+            Service: "sns.amazonaws.com"
+          Resource: !GetAtt P44MilestoneUpdatesQueue.Arn
+          Action: SQS:SendMessage
+          Condition:
+            "ForAnyValue:ArnEquals":
+              aws:SourceArn:
+                - ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-milestone/sns.arn~true}
+              
+P44MilestoneUpdatesSubscription:
+  Type: AWS::SNS::Subscription
+  Properties:
+    TopicArn: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/shipment-milestone/sns.arn~true}
+    Endpoint: !GetAtt 
+      - P44MilestoneUpdatesQueue
+      - Arn
+    Protocol: sqs
+    RawMessageDelivery: "true"
+

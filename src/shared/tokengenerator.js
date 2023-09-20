@@ -19,7 +19,6 @@ async function run() {
   ).then(res => res.data)
     .catch(err => console.error(err));
 
-  console.log(resp);
   const accToken = resp.access_token;
   return accToken
 }

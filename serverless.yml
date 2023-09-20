@@ -58,14 +58,15 @@ layers:
     name: ${self:service}-layer-${self:provider.stage}
     description: Omni Project44 Real Time Replication lambda layer for all node modules - ${self:provider.stage}
     compatibleRuntimes:
-      - nodejs14.x
+      - nodejs18.x
     retain: false
 
 functions:
   #realtime
-  p44MilestoneUpdate: ${file(config/functions/realtime/p44MilestoneUpdate.yml):function}
-  p44LocationUpdate: ${file(config/functions/realtime/p44LocationUpdate.yml):function}
-  
+  p44MilestoneUpdate: ${file(config/functions/realtime/tlUpdates/p44MilestoneUpdate.yml):function}
+  p44LocationUpdate: ${file(config/functions/realtime/tlUpdates/p44LocationUpdate.yml):function}
+  p44LtlMilestoneUpdate: ${file(config/functions/realtime/ltlUpdates/p44LtlMilestoneUpdates.yml):function}
+
 resources:
   Resources:
     OmniDwP44TlUpdateTable: ${file(config/dynamoDB/omniDwP44TlUpdateTable.yml):OmniDwP44TlUpdateTable}
@@ -77,3 +78,8 @@ resources:
     P44LocationUpdatesQueue: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueue}
     P44LocationUpdatesDLQ: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesDLQ}
     P44LocationUpdatesQueuePolicy: ${file(config/queues/p44LocationUpdatesQueue.yml):P44LocationUpdatesQueuePolicy}
+
+    P44MilestoneUpdatesQueue: ${file(config/queues/p44LtlMilestoneUpdatesQueue.yml):P44MilestoneUpdatesQueue}
+    P44MilestoneUpdatesDLQ: ${file(config/queues/p44LtlMilestoneUpdatesQueue.yml):P44MilestoneUpdatesDLQ}
+    P44MilestoneUpdatesSubscription: ${file(config/queues/p44LtlMilestoneUpdatesQueue.yml):P44MilestoneUpdatesSubscription}
+    P44MilestoneUpdatesQueuePolicy: ${file(config/queues/p44LtlMilestoneUpdatesQueue.yml):P44MilestoneUpdatesQueuePolicy}
