@@ -56,7 +56,7 @@ module.exports.handler = async (event, context) => {
             let customerName = "";
             if ((process.env.IMS_CUSTOMER_NUMBER).includes(BillNo)) {
                 console.log(`This is IMS_CUSTOMER_NUMBER`);
-                customerName = "IMS Retail";
+                customerName = "1679664480957";
             }
             if (customerName === "") {
                 console.log(`Skipping the record as the BillNo does not match with valid customer numbers`);
@@ -87,9 +87,9 @@ module.exports.handler = async (event, context) => {
             billOfLading = referenceNo;
             const eventDateTime = newImage.EventDateTime.S
 
-            const timeStamp = moment(eventDateTime).format('YYYY-MM-DDTHH:mm:ss');
             const mappedStatus = await mapStatusfunc(orderStatusId);
-
+            const timeStamp = await formatTimestamp(eventDateTime)
+            console.log("timeStamp:", timeStamp);
             // construct payload required to sending P44 API
             const payload = {
                 "customerAccount": {
@@ -131,7 +131,7 @@ module.exports.handler = async (event, context) => {
             // Inserted time stamp in CST format
             const InsertedTimeStamp = moment().tz('America/Chicago').format("YYYY-MM-DDTHH:mm:ss")
             // Saving the response code and payload in DynamoDB
-            console.log(id, billOfLading)
+            console.log("id:", id, "billOfLading:",billOfLading)
             // As json stringyfy is not supported for converting circular reference object to string
             // used Flatted npm package
             const jsonp44Response = Flatted.stringify(p44Response);
@@ -146,11 +146,19 @@ module.exports.handler = async (event, context) => {
                     InsertedTimeStamp
                 }
             };
-            const result = await putItem(milestoneparams);
+            await putItem(milestoneparams);
             console.log("record is inserted successfully")
         } catch (error) {
             console.error(error);
             return error
         }
     }
+}
+
+async function formatTimestamp(eventdatetime) {
+    const date = moment(eventdatetime);
+    const week = date.week();
+    console.log(week);
+    const offset = (week >= 11 && week <= 44) ? '-0500' : '-0600';
+    return date.format('YYYY-MM-DDTHH:mm:ss') + offset;
 }
