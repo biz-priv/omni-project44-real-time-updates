@@ -58,7 +58,7 @@ layers:
     name: ${self:service}-layer-${self:provider.stage}
     description: Omni Project44 Real Time Replication lambda layer for all node modules - ${self:provider.stage}
     compatibleRuntimes:
-      - nodejs14.x
+      - nodejs18.x
     retain: false
 
 functions:
