@@ -25,6 +25,8 @@ function:
     IMS_CUSTOMER_NUMBER: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/ims-customer/number}
     IMS_ACCOUNT_IDENTIFIER: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/ims-account/identifier}
     # JCPENNY_CUSTOMER_NUMBER: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/jcpenny-customer/number} # can be used later
+    DOTERRA_CUSTOMER_NUMBER: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/doterra-account/identifier}
+    DOTERRA_CUSTOMER_ENDPOINT: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/doterra-api/ltlStatusUpdates}
     REFERENCES_ORDERNO_INDEX: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/references/ddb.orderNoIndex}
     P44_LTL_STATUS_UPDATES_API: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/api/ltlStatusUpdates}      
     P44_CLIENT_ID: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/p44-credentials/clientId}
