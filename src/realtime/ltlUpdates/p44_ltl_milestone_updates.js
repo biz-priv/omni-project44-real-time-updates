@@ -8,7 +8,7 @@ const moment = require("moment-timezone");
 const Flatted = require("flatted");
 
 module.exports.handler = async (event, context) => {
-  console.log("Received event:", JSON.stringify(event));
+  console.info("Received event:", JSON.stringify(event));
   const records = event.Records;
   const id = uuidv4();
 
@@ -32,7 +32,7 @@ module.exports.handler = async (event, context) => {
       ];
 
       if (!validStatusCodes.includes(orderStatusId)) {
-        console.log(`Skipping record with order status ${orderStatusId}`);
+        console.info(`Skipping record with order status ${orderStatusId}`);
         continue;
       }
       // Checking whether the Bill belongs to IMS customer
@@ -48,36 +48,36 @@ module.exports.handler = async (event, context) => {
       let BillNo;
       if (items && items.length > 0) {
         BillNo = items[0].BillNo.S;
-        console.log("BillNo:", BillNo);
+        console.info("BillNo:", BillNo);
       } else {
-        console.log("headerResult have no values");
+        console.info("headerResult have no values");
         continue;
       }
 
       if (!headerResult.Items) {
-        console.log(`Skipping the record as headerResult.Item is falsy`);
+        console.info(`Skipping the record as headerResult.Item is falsy`);
         continue;
       }
       let customerName = "";
       let endpoint = "";
       if (process.env.IMS_CUSTOMER_NUMBER.includes(BillNo)) {
-        console.log(`This is IMS_CUSTOMER_NUMBER`);
+        console.info(`This is IMS_CUSTOMER_NUMBER`);
         customerName = process.env.IMS_ACCOUNT_IDENTIFIER;
         endpoint = process.env.P44_LTL_STATUS_UPDATES_API;
       }
       if (process.env.DOTERRA_CUSTOMER_NUMBER.includes(BillNo)) {
-        console.log(`This is DOTERRA_CUSTOMER_NUMBER`);
+        console.info(`This is DOTERRA_CUSTOMER_NUMBER`);
         customerName = process.env.DOTERRA_CUSTOMER_NUMBER; // here account num and identifier are same.
         endpoint = process.env.DOTERRA_CUSTOMER_ENDPOINT;
       }
       if (customerName === "") {
-        console.log(
+        console.info(
           `Skipping the record as the BillNo does not match with valid customer numbers`
         );
         continue;
       }
-      console.log("customerName", customerName);
-      console.log("endpoint", endpoint);
+      console.info("customerName", customerName);
+      console.info("endpoint", endpoint);
       let billOfLading;
       let referenceNo;
       const referenceparams = {
@@ -93,9 +93,8 @@ module.exports.handler = async (event, context) => {
         },
       };
       const referenceResult = await allqueries(referenceparams);
-      console.log("referenceResult", referenceResult);
       if (referenceResult.Items.length === 0) {
-        console.log(`No Bill of Lading found for order ${orderNo}`);
+        console.info(`No Bill of Lading found for order ${orderNo}`);
         continue;
       } else {
         referenceNo = referenceResult.Items[0].ReferenceNo.S;
@@ -105,7 +104,6 @@ module.exports.handler = async (event, context) => {
 
       const mappedStatus = await mapStatusfunc(orderStatusId);
       const timeStamp = await formatTimestamp(eventDateTime);
-      console.log("timeStamp:", timeStamp);
       // construct payload required to sending P44 API
       const payload = {
         customerAccount: {
@@ -130,7 +128,7 @@ module.exports.handler = async (event, context) => {
         timestamp: timeStamp,
         sourceType: "API",
       };
-      console.log("payload:", JSON.stringify(payload));
+      console.info("payload:", JSON.stringify(payload));
       // generating token with P44 oauth API
       const getaccesstocken = await run();
       // Calling P44 API with the constructed payload
@@ -145,7 +143,6 @@ module.exports.handler = async (event, context) => {
         .tz("America/Chicago")
         .format("YYYY-MM-DDTHH:mm:ss");
       // Saving the response code and payload in DynamoDB
-      console.log("id:", id, "billOfLading:", billOfLading);
       // As json stringyfy is not supported for converting circular reference object to string
       // used Flatted npm package
       const jsonp44Response = Flatted.stringify(p44Response);
@@ -161,7 +158,7 @@ module.exports.handler = async (event, context) => {
         },
       };
       await putItem(milestoneparams);
-      console.log("record is inserted successfully");
+      console.info("record is inserted successfully");
     } catch (error) {
       console.error(error);
       return error;
@@ -172,7 +169,6 @@ module.exports.handler = async (event, context) => {
 async function formatTimestamp(eventdatetime) {
   const date = moment(eventdatetime);
   const week = date.week();
-  console.log(week);
   const offset = week >= 11 && week <= 44 ? "-0500" : "-0600";
   return date.format("YYYY-MM-DDTHH:mm:ss") + offset;
 }

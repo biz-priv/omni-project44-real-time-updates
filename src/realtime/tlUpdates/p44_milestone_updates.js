@@ -8,13 +8,12 @@ const moment = require("moment-timezone");
 const Flatted = require("flatted");
 
 module.exports.handler = async (event, context) => {
-  console.log("Received event:", JSON.stringify(event));
+  console.info("Received event:", JSON.stringify(event));
   const records = event.Records;
   const id = uuidv4();
 
   for (const record of records) {
     try {
-      console.log("Processing record:", JSON.stringify(record));
       const body = JSON.parse(record.body);
       const newImage = body.NewImage;
       // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
@@ -32,7 +31,7 @@ module.exports.handler = async (event, context) => {
         "CAN",
       ];
       if (!validStatusCodes.includes(orderStatusId)) {
-        console.log(`Skipping record with order status ${orderStatusId}`);
+        console.info(`Skipping record with order status ${orderStatusId}`);
         continue;
       }
       // Checking whether the Billno's belongs to MCKESSON customer
@@ -50,24 +49,24 @@ module.exports.handler = async (event, context) => {
       if (items && items.length > 0) {
         BillNo = items[0].BillNo.S;
         houseBill = items[0].Housebill.S;
-        console.log("BillNo:", BillNo);
-        console.log("Housebill:", houseBill);
+        console.info("BillNo:", BillNo);
+        console.info("Housebill:", houseBill);
       } else {
-        console.log("headerResult have no values");
+        console.info("headerResult have no values");
         continue;
       }
 
       if (!headerResult.Items) {
-        console.log(`Skipping the record as headerResult.Item is falsy`);
+        console.info(`Skipping the record as headerResult.Item is falsy`);
         continue;
       }
       let customerId = "";
       if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo)) {
-        console.log(`This is MCKESSON_CUSTOMER_NUMBERS`);
+        console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
         customerId = "MCKESSON";
       }
       if (customerId === "") {
-        console.log(
+        console.info(
           `Skipping the record as the BillNo does not match with valid customer numbers`
         );
         continue;
@@ -87,11 +86,9 @@ module.exports.handler = async (event, context) => {
           ":refType": { S: "BOL" },
         },
       };
-      console.log("referenceparams:", referenceparams);
       const referenceResult = await allqueries(referenceparams);
-      console.log("referenceResult", referenceResult);
       if (referenceResult.Items.length === 0) {
-        console.log(`No Bill of Lading found for order ${orderNo}`);
+        console.info(`No Bill of Lading found for order ${orderNo}`);
         continue;
       } else {
         referenceNo = referenceResult.Items[0].ReferenceNo.S;
@@ -99,9 +96,7 @@ module.exports.handler = async (event, context) => {
 
       billOfLading = referenceNo;
       const eventDateTime = newImage.EventDateTime.S;
-      console.log("eventDateTime:", eventDateTime);
       const eventTimezone = newImage.EventTimeZone.S;
-      console.log("eventTimezone", eventTimezone);
       const timezoneparams = {
         TableName: process.env.TIME_ZONE_TABLE_NAME,
         KeyConditionExpression: `PK_TimeZoneCode = :code`,
@@ -111,7 +106,7 @@ module.exports.handler = async (event, context) => {
       };
       const timezoneResult = await allqueries(timezoneparams);
       if (timezoneResult.Items.length === 0) {
-        console.log(`timezoneResult have no values`);
+        console.info(`timezoneResult have no values`);
         continue;
       }
       const hoursaway = timezoneResult.Items[0].HoursAway.S;
@@ -119,8 +114,6 @@ module.exports.handler = async (event, context) => {
         .add(5 - hoursaway, "hours")
         .format("YYYY-MM-DDTHH:mm:ss");
       const mappedStatus = await mapStatus(orderStatusId);
-      console.log("orderStatusId", orderStatusId);
-      console.log("mappedStatus", mappedStatus);
 
       // Construct the payload
       const payload = {
@@ -137,7 +130,7 @@ module.exports.handler = async (event, context) => {
         eventStopNumber: mappedStatus.stopNumber,
         eventType: mappedStatus.type,
       };
-      console.log("payload:", payload);
+      console.info("payload:", payload);
       // generating token with P44 oauth API
       const getaccesstocken = await run();
       // Calling P44 API with the constructed payload
@@ -151,13 +144,12 @@ module.exports.handler = async (event, context) => {
           },
         }
       );
-      console.log("p44Response", p44Response);
+      console.info("p44Response", p44Response);
       // Inserted time stamp in CST format
       const InsertedTimeStamp = moment()
         .tz("America/Chicago")
         .format("YYYY-MM-DDTHH:mm:ss");
       // Saving the response code and payload in DynamoDB
-      console.log(id, billOfLading);
       // As json stringyfy is not supported for converting circular reference object to string
       // used Flatted npm package
       const jsonp44Response = Flatted.stringify(p44Response);
@@ -173,7 +165,7 @@ module.exports.handler = async (event, context) => {
         },
       };
       await putItem(milestoneparams);
-      console.log("record is inserted successfully");
+      console.info("record is inserted successfully");
     } catch (error) {
       console.error(error);
       return error;
