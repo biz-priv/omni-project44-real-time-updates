@@ -33,4 +33,6 @@ function:
     # JCPENNY_CUSTOMER_NUMBER: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/jcpenny-customer/number} # can be used later
     REFERENCES_ORDERNO_INDEX: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/references/ddb.orderNoIndex}
     TRACKING_NOTES_ORDERNO_INDEX: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/tracking-notes/ddb.orderNoIndex}
+    SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
+  	REGION: ${self:provider.region}
     TIME_ZONE_TABLE_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-master/ddb.tableName~true}
