@@ -1,4 +1,6 @@
 const AWS = require("aws-sdk");
+const {SNS_TOPIC_ARN } = process.env;
+const sns = new AWS.SNS({ region: process.env.REGION });
 const { v4: uuidv4 } = require('uuid');
 const axios = require("axios");
 const { putItem, allqueries } = require("../../shared/dynamo");
@@ -222,6 +224,11 @@ module.exports.handler = async (event, context) => {
             const result = await putItem(dynamoParams)
             console.info("record is inserted successfully");
         } catch (error) {
+            const params = {
+                Message: `Error in ${context.functionName}, Error: ${error.message}`,
+                TopicArn: SNS_TOPIC_ARN,
+            };
+            await sns.publish(params).promise();
             console.error(error);
             return error;
         }
