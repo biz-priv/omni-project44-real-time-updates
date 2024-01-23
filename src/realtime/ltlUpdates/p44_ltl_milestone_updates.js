@@ -6,7 +6,7 @@ const { putItem, allqueries } = require("../../shared/dynamo");
 const { run } = require("../../shared/tokengenerator");
 const moment = require("moment-timezone");
 const Flatted = require("flatted");
-const get = require("lodash.get");
+const { get } = require("lodash");
 
 module.exports.handler = async (event, context) => {
   console.info("Received event:", JSON.stringify(event));
