@@ -46,11 +46,15 @@ module.exports.handler = async (event, context) => {
       const items = headerResult.Items;
       let BillNo;
       let houseBill;
+      let fkServicelevelId ;
+
       if (items && items.length > 0) {
         BillNo = items[0].BillNo.S;
         houseBill = items[0].Housebill.S;
+        fkServicelevelId  = items[0].FK_ServiceLevelId.S;
         console.info("BillNo:", BillNo);
         console.info("Housebill:", houseBill);
+        console.info("fk_servicelevelid:", fkServicelevelId);
       } else {
         console.info("headerResult have no values");
         continue;
@@ -61,7 +65,7 @@ module.exports.handler = async (event, context) => {
         continue;
       }
       let customerId = "";
-      if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo)) {
+      if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && ["HS","FT"].includes(fkServicelevelId)) {
         console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
         customerId = "MCKESSON";
       }
