@@ -153,7 +153,6 @@ module.exports.handler = async (event, context) => {
         sourceType: "API",
       };
       console.info("payload:", JSON.stringify(payload));
-      return;
       // generating token with P44 oauth API
       const getaccesstocken = await run();
       // Calling P44 API with the constructed payload
