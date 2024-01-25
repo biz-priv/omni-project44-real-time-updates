@@ -6,18 +6,19 @@ const { putItem, allqueries } = require("../../shared/dynamo");
 const { run } = require("../../shared/tokengenerator");
 const moment = require("moment-timezone");
 const Flatted = require("flatted");
+const { get } = require("lodash");
 
 module.exports.handler = async (event, context) => {
   console.info("Received event:", JSON.stringify(event));
   const records = event.Records;
 
-  for (const record of records) {
+  const promises = records.map(async (record) => {
     try {
       const body = JSON.parse(record.body);
-      const newImage = body.NewImage;
-      // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
-      const orderNo = newImage.FK_OrderNo.S;
-      const orderStatusId = newImage.FK_OrderStatusId.S;
+      const newImage = get(body, "NewImage", {});
+       // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
+      const orderNo = get(newImage, "FK_OrderNo.S");
+      const orderStatusId = get(newImage, "FK_OrderStatusId.S");
 
       // Check whether the order status is valid
       const validStatusCodes = [
@@ -32,7 +33,7 @@ module.exports.handler = async (event, context) => {
 
       if (!validStatusCodes.includes(orderStatusId)) {
         console.info(`Skipping record with order status ${orderStatusId}`);
-        continue;
+        return;
       }
       // Checking whether the Bill belongs to IMS customer
       const headerparams = {
@@ -44,21 +45,25 @@ module.exports.handler = async (event, context) => {
       const items = headerResult.Items;
       let BillNo;
       let housebill;
+      let fkServicelevelId ;
 
       if (items && items.length > 0) {
-        BillNo = items[0].BillNo.S;
-        housebill = items[0].Housebill.S;
+        BillNo = get(items,"[0].BillNo.S");
+        housebill = get(items,"[0].Housebill.S");
+        fkServicelevelId  = get(items,"[0].FK_ServiceLevelId.S");
         console.info("BillNo:", BillNo);
         console.info("housebill:", housebill);
+        console.info("fk_servicelevelid:", fkServicelevelId);
       } else {
         console.info("headerResult has no values");
-        continue;
+        return;
       }
 
       if (!headerResult.Items) {
         console.info(`Skipping the record as headerResult.Items is falsy`);
-        continue;
+        return;
       }
+
       let customerName = "";
       let endpoint = "";
       if (process.env.IMS_CUSTOMER_NUMBER.includes(BillNo)) {
@@ -71,11 +76,16 @@ module.exports.handler = async (event, context) => {
         customerName = process.env.DOTERRA_CUSTOMER_NUMBER; // here account num and identifier are the same.
         endpoint = process.env.DOTERRA_CUSTOMER_ENDPOINT;
       }
+      if ( process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && !["HS", "FT"].includes(fkServicelevelId) ) {
+        console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
+        customerName = "MCKESSON";
+        endpoint = process.env.P44_LTL_STATUS_UPDATES_API;
+      }
       if (customerName === "") {
         console.info(
           `Skipping the record as the BillNo does not match with valid customer numbers`
         );
-        continue;
+        return;
       }
       console.info("customerName", customerName);
       console.info("endpoint", endpoint);
@@ -100,9 +110,9 @@ module.exports.handler = async (event, context) => {
 
         if (referenceResult.Items.length === 0) {
           console.info(`No Bill of Lading found for order ${orderNo}`);
-          continue;
+          return; 
         } else {
-          referenceNo = referenceResult.Items[0].ReferenceNo.S;
+          referenceNo = get(referenceResult.Items, "[0].ReferenceNo.S");
         }
       }
 
@@ -115,7 +125,7 @@ module.exports.handler = async (event, context) => {
         billOfLading = referenceNo;
       }
 
-      const eventDateTime = newImage.EventDateTime.S;
+      const eventDateTime = get(newImage, "EventDateTime.S");
       const mappedStatus = await mapStatusfunc(orderStatusId);
       const timeStamp = await formatTimestamp(eventDateTime);
       // construct payload required to sending P44 API
@@ -174,8 +184,15 @@ module.exports.handler = async (event, context) => {
       console.info("Record is inserted successfully");
     } catch (error) {
       console.error(error);
-      return error;
+      throw error;
     }
+  });
+
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.error("An error occurred in one or more promises:", error);
+    return error;
   }
 };
 
