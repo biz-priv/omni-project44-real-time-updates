@@ -91,6 +91,7 @@ module.exports.handler = async (event, context) => {
       console.info("endpoint", endpoint);
       let billOfLading;
       let referenceNo;
+      let typeOFshipmentIdentifier;
 
       if (customerName !== process.env.DOTERRA_CUSTOMER_NUMBER) {
         const referenceparams = {
@@ -117,12 +118,18 @@ module.exports.handler = async (event, context) => {
       }
 
       // Determine the value of billOfLading based on customerName
-      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER) {
+      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER || customerName === process.env.MCKESSON_CUSTOMER_NUMBERS) {
         // If customerName is DOTERRA, use housebill
         billOfLading = housebill;
       } else {
         // Otherwise, use referenceNo
         billOfLading = referenceNo;
+      }
+
+      if(customerName === process.env.MCKESSON_CUSTOMER_NUMBERS){
+        typeOFshipmentIdentifier = "PRO"
+      } else{
+        typeOFshipmentIdentifier = "BILL_OF_LADING"
       }
 
       const eventDateTime = get(newImage, "EventDateTime.S");
@@ -140,7 +147,7 @@ module.exports.handler = async (event, context) => {
 
         shipmentIdentifiers: [
           {
-            type: "BILL_OF_LADING",
+            type: typeOFshipmentIdentifier,
             value: billOfLading,
             primaryForType: false,
             source: "CAPACITY_PROVIDER",
@@ -162,6 +169,7 @@ module.exports.handler = async (event, context) => {
           Authorization: `Bearer ${getaccesstocken}`,
         },
       });
+      console.info("p44Response", p44Response);
       // Inserted time stamp in CST format
       const InsertedTimeStamp = moment()
         .tz("America/Chicago")
