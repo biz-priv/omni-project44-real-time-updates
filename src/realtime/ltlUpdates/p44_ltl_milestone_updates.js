@@ -118,7 +118,7 @@ module.exports.handler = async (event, context) => {
       }
 
       // Determine the value of billOfLading based on customerName
-      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER || customerName === process.env.MCKESSON_CUSTOMER_NUMBERS) {
+      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER || customerName === "MCKESSON") {
         // If customerName is DOTERRA, use housebill
         billOfLading = housebill;
       } else {
@@ -126,10 +126,10 @@ module.exports.handler = async (event, context) => {
         billOfLading = referenceNo;
       }
 
-      if(customerName === process.env.MCKESSON_CUSTOMER_NUMBERS){
-        typeOFshipmentIdentifier = "PRO"
+      if(customerName === "MCKESSON"){
+        typeOFshipmentIdentifier = "PRO";
       } else{
-        typeOFshipmentIdentifier = "BILL_OF_LADING"
+        typeOFshipmentIdentifier = "BILL_OF_LADING";
       }
 
       const eventDateTime = get(newImage, "EventDateTime.S");
