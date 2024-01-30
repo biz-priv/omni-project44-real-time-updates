@@ -6,19 +6,20 @@ const { putItem, allqueries } = require("../../shared/dynamo");
 const { run } = require("../../shared/tokengenerator");
 const moment = require("moment-timezone");
 const Flatted = require("flatted");
+const { get } = require("lodash");
 
 module.exports.handler = async (event, context) => {
   console.info("Received event:", JSON.stringify(event));
   const records = event.Records;
   const id = uuidv4();
 
-  for (const record of records) {
+  const promises = records.map(async (record) => {
     try {
       const body = JSON.parse(record.body);
-      const newImage = body.NewImage;
+      const newImage = get(body, "NewImage", {});
       // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
-      const orderNo = newImage.FK_OrderNo.S;
-      const orderStatusId = newImage.FK_OrderStatusId.S;
+      const orderNo = get(newImage, "FK_OrderNo.S");
+      const orderStatusId = get(newImage, "FK_OrderStatusId.S");
 
       // Check whether the order status is valid
       const validStatusCodes = [
@@ -32,7 +33,7 @@ module.exports.handler = async (event, context) => {
       ];
       if (!validStatusCodes.includes(orderStatusId)) {
         console.info(`Skipping record with order status ${orderStatusId}`);
-        continue;
+        return;
       }
       // Checking whether the Billno's belongs to MCKESSON customer
       const headerparams = {
@@ -43,33 +44,37 @@ module.exports.handler = async (event, context) => {
         },
       };
       const headerResult = await allqueries(headerparams);
-      const items = headerResult.Items;
+      const items = get(headerResult, "Items", []);
       let BillNo;
       let houseBill;
+      let fkServicelevelId;
+
       if (items && items.length > 0) {
-        BillNo = items[0].BillNo.S;
-        houseBill = items[0].Housebill.S;
+        BillNo = get(items, "[0].BillNo.S");
+        houseBill = get(items, "[0].Housebill.S");
+        fkServicelevelId = get(items, "[0].FK_ServiceLevelId.S");
         console.info("BillNo:", BillNo);
         console.info("Housebill:", houseBill);
+        console.info("fk_servicelevelid:", fkServicelevelId);
       } else {
         console.info("headerResult have no values");
-        continue;
+        return;
       }
 
       if (!headerResult.Items) {
         console.info(`Skipping the record as headerResult.Item is falsy`);
-        continue;
+        return;
       }
       let customerId = "";
-      if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo)) {
+      if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && ["HS", "FT"].includes(fkServicelevelId)) {
         console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
-        customerId = "MCKESSON";
+        customerId = process.env.MCKESSON_CUSTOMER_NAME;
       }
       if (customerId === "") {
         console.info(
           `Skipping the record as the BillNo does not match with valid customer numbers`
         );
-        continue;
+        return;
       }
 
       let billOfLading;
@@ -89,14 +94,14 @@ module.exports.handler = async (event, context) => {
       const referenceResult = await allqueries(referenceparams);
       if (referenceResult.Items.length === 0) {
         console.info(`No Bill of Lading found for order ${orderNo}`);
-        continue;
+        return;
       } else {
-        referenceNo = referenceResult.Items[0].ReferenceNo.S;
+        referenceNo = get(referenceResult.Items, "[0].ReferenceNo.S");
       }
 
       billOfLading = referenceNo;
-      const eventDateTime = newImage.EventDateTime.S;
-      const eventTimezone = newImage.EventTimeZone.S;
+      const eventDateTime = get(newImage, "EventDateTime.S");
+      const eventTimezone = get(newImage, "EventTimeZone.S");
       const timezoneparams = {
         TableName: process.env.TIME_ZONE_TABLE_NAME,
         KeyConditionExpression: `PK_TimeZoneCode = :code`,
@@ -107,9 +112,9 @@ module.exports.handler = async (event, context) => {
       const timezoneResult = await allqueries(timezoneparams);
       if (timezoneResult.Items.length === 0) {
         console.info(`timezoneResult have no values`);
-        continue;
+        return;
       }
-      const hoursaway = timezoneResult.Items[0].HoursAway.S;
+      const hoursaway = get(timezoneResult.Items, "[0].HoursAway.S");
       const utcTimestamp = moment(eventDateTime)
         .add(5 - hoursaway, "hours")
         .format("YYYY-MM-DDTHH:mm:ss");
@@ -168,7 +173,14 @@ module.exports.handler = async (event, context) => {
       console.info("record is inserted successfully");
     } catch (error) {
       console.error(error);
-      return error;
+      throw error;
     }
+  });
+
+  try {
+    await Promise.all(promises);
+  } catch (error) {
+    console.error("An error occurred in one or more promises:", error);
+    return error;
   }
 };
