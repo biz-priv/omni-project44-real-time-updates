@@ -68,7 +68,7 @@ module.exports.handler = async (event, context) => {
       let customerId = "";
       if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && ["HS", "FT"].includes(fkServicelevelId)) {
         console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
-        customerId = "MCKESSON";
+        customerId = process.env.MCKESSON_CUSTOMER_NAME;
       }
       if (customerId === "") {
         console.info(
