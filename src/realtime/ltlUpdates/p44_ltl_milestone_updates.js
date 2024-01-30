@@ -78,7 +78,7 @@ module.exports.handler = async (event, context) => {
       }
       if ( process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && !["HS", "FT"].includes(fkServicelevelId) ) {
         console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
-        customerName = "MCKESSON";
+        customerName = process.env.MCKESSON_CUSTOMER_NAME;
         endpoint = process.env.P44_LTL_STATUS_UPDATES_API;
       }
       if (customerName === "") {
@@ -118,7 +118,7 @@ module.exports.handler = async (event, context) => {
       }
 
       // Determine the value of billOfLading based on customerName
-      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER || customerName === "MCKESSON") {
+      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER || customerName === process.env.MCKESSON_CUSTOMER_NAME) {
         // If customerName is DOTERRA, use housebill
         billOfLading = housebill;
       } else {
@@ -126,7 +126,7 @@ module.exports.handler = async (event, context) => {
         billOfLading = referenceNo;
       }
 
-      if(customerName === "MCKESSON"){
+      if(customerName === process.env.MCKESSON_CUSTOMER_NAME){
         typeOFshipmentIdentifier = "PRO";
       } else{
         typeOFshipmentIdentifier = "BILL_OF_LADING";
