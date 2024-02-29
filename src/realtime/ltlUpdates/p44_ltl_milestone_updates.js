@@ -16,6 +16,20 @@ module.exports.handler = async (event, context) => {
     try {
       const body = JSON.parse(record.body);
       const newImage = get(body, "NewImage", {});
+      const oldImage = get(body, "OldImage", '');
+      let newRecordUpdateFlag = '';
+      if(oldImage !== ''){
+        for(const key in oldImage){
+          if(oldImage[key]['S'] !== newImage[key]['S'] && !['UUid', 'ProcessState', 'InsertedTimeStamp'].includes(key)){
+            console.info(key)
+            newRecordUpdateFlag = 'Yes'
+          }
+        }
+        if(newRecordUpdateFlag === ''){
+          console.info('There is no new update for this record.So, ignoring')
+          return;
+        }
+      }
        // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
       const orderNo = get(newImage, "FK_OrderNo.S");
       const orderStatusId = get(newImage, "FK_OrderStatusId.S");
