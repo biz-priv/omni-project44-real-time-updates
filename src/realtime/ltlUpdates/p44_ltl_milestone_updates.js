@@ -140,11 +140,11 @@ module.exports.handler = async (event, context) => {
         billOfLading = referenceNo;
       }
 
-      if(customerName === process.env.MCKESSON_CUSTOMER_NAME){
-        typeOFshipmentIdentifier = "PRO";
-      } else{
-        typeOFshipmentIdentifier = "BILL_OF_LADING";
-      }
+      // if(customerName === process.env.MCKESSON_CUSTOMER_NAME){
+      //   typeOFshipmentIdentifier = "PRO";
+      // } else{
+      //   typeOFshipmentIdentifier = "BILL_OF_LADING";
+      // }
 
       const eventDateTime = get(newImage, "EventDateTime.S");
       const mappedStatus = await mapStatusfunc(orderStatusId);
@@ -160,12 +160,12 @@ module.exports.handler = async (event, context) => {
         },
 
         shipmentIdentifiers: [
-          {
-            type: typeOFshipmentIdentifier,
-            value: billOfLading,
-            primaryForType: false,
-            source: "CAPACITY_PROVIDER",
-          },
+          // {
+          //   type: typeOFshipmentIdentifier,
+          //   value: billOfLading,
+          //   primaryForType: false,
+          //   source: "CAPACITY_PROVIDER",
+          // },
         ],
         statusCode: mappedStatus.eventType,
         stopType: mappedStatus.stopType,
@@ -173,6 +173,27 @@ module.exports.handler = async (event, context) => {
         timestamp: timeStamp,
         sourceType: "API",
       };
+      if (customerName === process.env.MCKESSON_CUSTOMER_NAME) {
+        payload.shipmentIdentifiers.push({
+          type: "PRO",
+          value: billOfLading,
+          primaryForType: false,
+          source: "CAPACITY_PROVIDER",
+        },
+          {
+            type: "BILL_OF_LADING",
+            value: billOfLading,
+            primaryForType: false,
+            source: "CAPACITY_PROVIDER",
+          });
+      } else {
+        payload.shipmentIdentifiers.push({
+          type: "BILL_OF_LADING",
+          value: billOfLading,
+          primaryForType: false,
+          source: "CAPACITY_PROVIDER",
+        });
+      }
       console.info("payload:", JSON.stringify(payload));
       // generating token with P44 oauth API
       const getaccesstocken = await run();
