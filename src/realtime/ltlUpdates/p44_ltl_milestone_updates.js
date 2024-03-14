@@ -105,7 +105,6 @@ module.exports.handler = async (event, context) => {
       console.info("endpoint", endpoint);
       let billOfLading;
       let referenceNo;
-      let typeOFshipmentIdentifier;
 
       if (customerName !== process.env.DOTERRA_CUSTOMER_NUMBER) {
         const referenceparams = {
@@ -132,19 +131,13 @@ module.exports.handler = async (event, context) => {
       }
 
       // Determine the value of billOfLading based on customerName
-      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER || customerName === process.env.MCKESSON_CUSTOMER_NAME) {
+      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER) {
         // If customerName is DOTERRA, use housebill
         billOfLading = housebill;
       } else {
         // Otherwise, use referenceNo
         billOfLading = referenceNo;
       }
-
-      // if(customerName === process.env.MCKESSON_CUSTOMER_NAME){
-      //   typeOFshipmentIdentifier = "PRO";
-      // } else{
-      //   typeOFshipmentIdentifier = "BILL_OF_LADING";
-      // }
 
       const eventDateTime = get(newImage, "EventDateTime.S");
       const mappedStatus = await mapStatusfunc(orderStatusId);
@@ -159,14 +152,7 @@ module.exports.handler = async (event, context) => {
           value: "OMNG",
         },
 
-        shipmentIdentifiers: [
-          // {
-          //   type: typeOFshipmentIdentifier,
-          //   value: billOfLading,
-          //   primaryForType: false,
-          //   source: "CAPACITY_PROVIDER",
-          // },
-        ],
+        shipmentIdentifiers: [],
         statusCode: mappedStatus.eventType,
         stopType: mappedStatus.stopType,
         stopNumber: mappedStatus.stopNumber,
