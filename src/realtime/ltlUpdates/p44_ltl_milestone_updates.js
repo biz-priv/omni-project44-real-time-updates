@@ -105,7 +105,6 @@ module.exports.handler = async (event, context) => {
       console.info("endpoint", endpoint);
       let billOfLading;
       let referenceNo;
-      let typeOFshipmentIdentifier;
 
       if (customerName !== process.env.DOTERRA_CUSTOMER_NUMBER) {
         const referenceparams = {
@@ -132,18 +131,12 @@ module.exports.handler = async (event, context) => {
       }
 
       // Determine the value of billOfLading based on customerName
-      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER || customerName === process.env.MCKESSON_CUSTOMER_NAME) {
+      if (customerName === process.env.DOTERRA_CUSTOMER_NUMBER) {
         // If customerName is DOTERRA, use housebill
         billOfLading = housebill;
       } else {
         // Otherwise, use referenceNo
         billOfLading = referenceNo;
-      }
-
-      if(customerName === process.env.MCKESSON_CUSTOMER_NAME){
-        typeOFshipmentIdentifier = "PRO";
-      } else{
-        typeOFshipmentIdentifier = "BILL_OF_LADING";
       }
 
       const eventDateTime = get(newImage, "EventDateTime.S");
@@ -159,20 +152,34 @@ module.exports.handler = async (event, context) => {
           value: "OMNG",
         },
 
-        shipmentIdentifiers: [
-          {
-            type: typeOFshipmentIdentifier,
-            value: billOfLading,
-            primaryForType: false,
-            source: "CAPACITY_PROVIDER",
-          },
-        ],
+        shipmentIdentifiers: [],
         statusCode: mappedStatus.eventType,
         stopType: mappedStatus.stopType,
         stopNumber: mappedStatus.stopNumber,
         timestamp: timeStamp,
         sourceType: "API",
       };
+      if (customerName === process.env.MCKESSON_CUSTOMER_NAME) {
+        payload.shipmentIdentifiers.push({
+          type: "PRO",
+          value: billOfLading,
+          primaryForType: false,
+          source: "CAPACITY_PROVIDER",
+        },
+          {
+            type: "BILL_OF_LADING",
+            value: billOfLading,
+            primaryForType: false,
+            source: "CAPACITY_PROVIDER",
+          });
+      } else {
+        payload.shipmentIdentifiers.push({
+          type: "BILL_OF_LADING",
+          value: billOfLading,
+          primaryForType: false,
+          source: "CAPACITY_PROVIDER",
+        });
+      }
       console.info("payload:", JSON.stringify(payload));
       // generating token with P44 oauth API
       const getaccesstocken = await run();
