@@ -21,12 +21,12 @@ module.exports.handler = async (event, context) => {
       if(oldImage !== ''){
         for(const key in oldImage){
           if(oldImage[key]['S'] !== newImage[key]['S'] && !['UUid', 'ProcessState', 'InsertedTimeStamp'].includes(key)){
-            console.info(key)
-            newRecordUpdateFlag = 'Yes'
+            console.info(key);
+            newRecordUpdateFlag = 'Yes';
           }
         }
         if(newRecordUpdateFlag === ''){
-          console.info('There is no new update for this record.So, ignoring')
+          console.info('There is no new update for this record.So, ignoring');
           return;
         }
       }
@@ -229,7 +229,7 @@ module.exports.handler = async (event, context) => {
 async function formatTimestamp(eventdatetime, eventTimezone) {
   const date = moment(eventdatetime);
   const week = date.week();
-  const offset = week >= 11 && week <= 44 ? 5 : 6;
+  let offset = week >= 11 && week <= 44 ? 5 : 6;
   const timezoneparams = {
     TableName: process.env.TIME_ZONE_TABLE_NAME,
     KeyConditionExpression: `PK_TimeZoneCode = :code`,
@@ -237,11 +237,12 @@ async function formatTimestamp(eventdatetime, eventTimezone) {
       ":code": { S: eventTimezone }
     }
   };
-  console.log("timezoneparams:", timezoneparams)
+  console.info("timezoneparams:", timezoneparams);
   const timezoneResult = await allqueries(timezoneparams);
   if (timezoneResult.Items.length === 0) {
     console.info(`timezoneResult have no values`);
-    return date.format("YYYY-MM-DDTHH:mm:ss") + week >= 11 && week <= 44 ? "-0500" : "-0600"
+    offset = week >= 11 && week <= 44 ? "-0500" : "-0600";
+    return date.format("YYYY-MM-DDTHH:mm:ss") + offset;
   }
   const hoursaway = timezoneResult.Items[0].HoursAway.S;
 
