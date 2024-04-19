@@ -140,8 +140,9 @@ module.exports.handler = async (event, context) => {
       }
 
       const eventDateTime = get(newImage, "EventDateTime.S");
+      const eventTimezone = get(newImage, "EventTimeZone.S");
       const mappedStatus = await mapStatusfunc(orderStatusId);
-      const timeStamp = await formatTimestamp(eventDateTime);
+      const timeStamp = await formatTimestamp(eventDateTime, eventTimezone);
       // construct payload required to sending P44 API
       const payload = {
         customerAccount: {
@@ -225,9 +226,24 @@ module.exports.handler = async (event, context) => {
   }
 };
 
-async function formatTimestamp(eventdatetime) {
+async function formatTimestamp(eventdatetime, eventTimezone) {
   const date = moment(eventdatetime);
   const week = date.week();
-  const offset = week >= 11 && week <= 44 ? "-0500" : "-0600";
-  return date.format("YYYY-MM-DDTHH:mm:ss") + offset;
+  const offset = week >= 11 && week <= 44 ? 5 : 6;
+  const timezoneparams = {
+    TableName: process.env.TIME_ZONE_TABLE_NAME,
+    KeyConditionExpression: `PK_TimeZoneCode = :code`,
+    ExpressionAttributeValues: {
+      ":code": { S: eventTimezone }
+    }
+  };
+  console.log("timezoneparams:", timezoneparams)
+  const timezoneResult = await allqueries(timezoneparams);
+  if (timezoneResult.Items.length === 0) {
+    console.info(`timezoneResult have no values`);
+    return "-0500";
+  }
+  const hoursaway = timezoneResult.Items[0].HoursAway.S;
+
+  return date.format("YYYY-MM-DDTHH:mm:ss") + "-0" + (offset - hoursaway) + "00";
 }
