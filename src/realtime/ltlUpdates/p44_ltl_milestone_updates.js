@@ -241,7 +241,7 @@ async function formatTimestamp(eventdatetime, eventTimezone) {
   const timezoneResult = await allqueries(timezoneparams);
   if (timezoneResult.Items.length === 0) {
     console.info(`timezoneResult have no values`);
-    return "-0500";
+    return date.format("YYYY-MM-DDTHH:mm:ss") + week >= 11 && week <= 44 ? "-0500" : "-0600"
   }
   const hoursaway = timezoneResult.Items[0].HoursAway.S;
 
