@@ -1,3 +1,10 @@
+/*
+* File: src\shared\tokengenerator.js
+* Project: Omni-project44-real-time-updates
+* Author: Bizcloud Experts
+* Date: 2023-09-20
+* Confidential and Proprietary
+*/
 const axios = require('axios');
 const AWS = require("aws-sdk");
 
