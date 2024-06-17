@@ -41,8 +41,8 @@ provider:
 custom:
   region: ${opt:region, 'us-east-1'}
   stage: ${opt:stage, 'dev'}
-  tags:
-    Application: P44MilestoneUpdates
+  stackTags:
+    Application: Omni-P44MilestoneUpdates
     CreateBy: BizCloudExperts
     Environment: ${self:custom.stage}
 

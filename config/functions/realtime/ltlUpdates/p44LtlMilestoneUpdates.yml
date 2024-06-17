@@ -5,6 +5,8 @@ function:
   memorySize: 1024
   timeout: 90
   runtime: nodejs18.x
+  tags:
+    Name: milestone-ltl-update
   layers:
     - { Ref: P44RtLambdaLayerLambdaLayer }
   package:
