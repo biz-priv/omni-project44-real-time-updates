@@ -15,10 +15,10 @@
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "moment-timezone": "^0.5.43",
+    "serverless": "^4.1.15",
     "uuid": "^9.0.0"
   },
   "devDependencies": {
-    "serverless": "2.72.3",
     "serverless-offline": "^8.8.0"
   }
 }
