@@ -6,7 +6,7 @@ function:
   timeout: 90
   runtime: nodejs18.x
   tags:
-    Name: milestone-ltl-update
+    Name: omni-dw-project44-milestone-ltl-update-${self:provider.stage}
   layers:
     - { Ref: P44RtLambdaLayerLambdaLayer }
   package:

@@ -6,7 +6,7 @@ function:
   timeout: 90
   runtime: nodejs18.x
   tags:
-    Name: tl-location-update
+    Name: omni-dw-project44-tl-location-update-${self:provider.stage}
   layers:
     - { Ref: P44RtLambdaLayerLambdaLayer }
   package:
