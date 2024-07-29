@@ -1,4 +1,10 @@
-
+/*
+* File: src\shared\datamapping.js
+* Project: Omni-project44-real-time-updates
+* Author: Bizcloud Experts
+* Date: 2023-07-05
+* Confidential and Proprietary
+*/
 
 async function mapStatus(validStatusCodes) {
   switch (validStatusCodes) {

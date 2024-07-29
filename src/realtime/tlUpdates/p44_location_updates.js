@@ -1,3 +1,10 @@
+/*
+* File: src\realtime\tlUpdates\p44_location_updates.js
+* Project: Omni-project44-real-time-updates
+* Author: Bizcloud Experts
+* Date: 2023-10-20
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require('uuid');
 const axios = require("axios");
