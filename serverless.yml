@@ -66,6 +66,7 @@ functions:
   p44MilestoneUpdate: ${file(config/functions/realtime/tlUpdates/p44MilestoneUpdate.yml):function}
   p44LocationUpdate: ${file(config/functions/realtime/tlUpdates/p44LocationUpdate.yml):function}
   p44LtlMilestoneUpdate: ${file(config/functions/realtime/ltlUpdates/p44LtlMilestoneUpdates.yml):function}
+  p44LtlLocationUpdates: ${file(config/functions/realtime/ltlUpdates/p44LtlLocationUpdates.yml):function}
 
 resources:
   Resources:
