@@ -6,7 +6,6 @@
 * Confidential and Proprietary
 */
 const AWS = require("aws-sdk");
-const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
 const { putItem, allqueries } = require("../../shared/dynamo");
 const { run } = require("../../shared/tokengenerator");
@@ -207,21 +206,19 @@ async function formatTimestamp(eventdatetime, eventTimezone) {
 }
 
 async function getAddress(latitude, longitude) {
-    // const googleApiRes = await callGoogleAPi({ lat: '40.95254517', long: '-85.22586123' })
-    const googleApiRes = await getAddressUsingGeocoder({ lat: latitude, long: longitude })
+    const googleApiRes = await getAddressUsingGeocoder({ lat: latitude, long: longitude });
     console.info(':slightly_smiling_face: -> file: index.js:3 -> getAddress -> googleApiRes:', googleApiRes);
-    // const addessComponentWithLocaloty = _.get(googleApiRes, 'results').filter(address =>)
     const city = _.get(googleApiRes, '0.city');
     const state = _.get(googleApiRes, '0.administrativeLevels.level1short');
     const country = _.get(googleApiRes, '0.countryCode');
     console.info('��� -> file: index.js:3 -> getAddress -> city:', city, state, country);
-    return { city, state, country }
+    return { city, state, country };
 }
 
 async function getAddressUsingGeocoder({ lat, long }) {
     const options = {
         provider: 'google',
-        apiKey: process.env.GOOGLE_API_KEY, // for Mapquest, OpenCage, APlace, Google Premier
+        apiKey: process.env.GOOGLE_API_KEY,
     };
 
     const geocoder = NodeGeocoder(options);
