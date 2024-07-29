@@ -12,7 +12,7 @@ const { putItem, allqueries } = require("../../shared/dynamo");
 const { run } = require("../../shared/tokengenerator");
 const moment = require("moment-timezone");
 const Flatted = require("flatted");
-const { get } = require("lodash");
+const _ = require("lodash");
 const NodeGeocoder = require('node-geocoder');
 
 module.exports.handler = async (event, context) => {
@@ -22,43 +22,35 @@ module.exports.handler = async (event, context) => {
     const promises = records.map(async (record) => {
         try {
             const body = JSON.parse(record.body);
-            const newImage = get(body, "NewImage", {});
-            const oldImage = get(body, "OldImage", '');
-            let newRecordUpdateFlag = '';
-            if (oldImage !== '') {
-                for (const key in oldImage) {
-                    if (oldImage[key]['S'] !== newImage[key]['S'] && !['UUid', 'ProcessState', 'InsertedTimeStamp'].includes(key)) {
-                        console.info(key);
-                        newRecordUpdateFlag = 'Yes';
-                    }
-                }
-                if (newRecordUpdateFlag === '') {
-                    console.info('There is no new update for this record.So, ignoring');
-                    return;
-                }
-            }
-            // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
-            const orderNo = get(newImage, "FK_OrderNo.S");
+            const message = JSON.parse(_.get(body, "Message", {}));
+            const newImage = _.get(message, "dynamodb.NewImage", {});
+            const houseBill = _.get(newImage, "HouseBillNo.S");
+            const longi = _.get(newImage, "longitude.N");
+            const lati = _.get(newImage, "latitude.N");
 
-            // Checking whether the Bill belongs to IMS customer
+            const address = await getAddress(lati, longi);
+
+            console.info("address", address);
+
             const headerparams = {
                 TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
-                KeyConditionExpression: `PK_OrderNo = :orderNo`,
-                ExpressionAttributeValues: { ":orderNo": { S: orderNo } },
+                IndexName: "Housebill-index",
+                KeyConditionExpression: `Housebill = :value`,
+                ExpressionAttributeValues: { ":value": { S: houseBill } },
             };
             const headerResult = await allqueries(headerparams);
             const items = headerResult.Items;
             let BillNo;
-            let housebill;
             let fkServicelevelId;
+            let orderNo;
 
             if (items && items.length > 0) {
-                BillNo = get(items, "[0].BillNo.S");
-                housebill = get(items, "[0].Housebill.S");
-                fkServicelevelId = get(items, "[0].FK_ServiceLevelId.S");
+                BillNo = _.get(items, "[0].BillNo.S");
+                fkServicelevelId = _.get(items, "[0].FK_ServiceLevelId.S");
+                orderNo = _.get(items, "[0].PK_OrderNo.S");
                 console.info("BillNo:", BillNo);
-                console.info("housebill:", housebill);
                 console.info("fk_servicelevelid:", fkServicelevelId);
+
             } else {
                 console.info("headerResult has no values");
                 return;
@@ -75,7 +67,7 @@ module.exports.handler = async (event, context) => {
             if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && !["HS", "FT"].includes(fkServicelevelId)) {
                 console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
                 customerName = process.env.MCKESSON_CUSTOMER_NAME;
-                endpoint = process.env.P44_LTL_STATUS_UPDATES_API;
+                endpoint = process.env.P44_LTL_LOCATION_UPDATES_API;
             }
             if (customerName === "") {
                 console.info(
@@ -84,7 +76,6 @@ module.exports.handler = async (event, context) => {
                 return;
             }
 
-            let billOfLading;
             let referenceNo;
             const referenceparams = {
                 TableName: process.env.REFERENCES_TABLE_NAME,
@@ -105,14 +96,12 @@ module.exports.handler = async (event, context) => {
                 console.info(`No Bill of Lading found for order ${orderNo}`);
                 return;
             } else {
-                referenceNo = get(referenceResult.Items, "[0].ReferenceNo.S");
+                referenceNo = _.get(referenceResult.Items, "[0].ReferenceNo.S");
             }
-            billOfLading = referenceNo;
 
-            const eventDateTime = get(newImage, "EventDateTime.S");
-            const eventTimezone = "CST";
-            const timeStamp = await formatTimestamp(eventDateTime, eventTimezone);
-            // construct payload required to sending P44 API
+            const utcTimeStamp = _.get(newImage, "UTCTimeStamp.S");
+            const timezone = "CST";
+            const timeStamp = await formatTimestamp(utcTimeStamp, timezone);
             const payload = {
                 customerAccount: {
                     accountIdentifier: customerName,
@@ -130,9 +119,9 @@ module.exports.handler = async (event, context) => {
                 },
                 location: {
                     "address": {
-                        "city": "OSTERBURG",
-                        "state": "PA",
-                        "country": "US"
+                        "city": address.city,
+                        "state": address.state,
+                        "country": address.country
                     }
                 },
                 timestamp: timeStamp,
@@ -141,22 +130,19 @@ module.exports.handler = async (event, context) => {
             if (customerName === process.env.MCKESSON_CUSTOMER_NAME) {
                 payload.shipmentIdentifiers.push({
                     type: "PRO",
-                    value: billOfLading,
+                    value: referenceNo,
                     primaryForType: false,
                     source: "CAPACITY_PROVIDER",
                 },
                     {
                         type: "BILL_OF_LADING",
-                        value: billOfLading,
+                        value: referenceNo,
                         primaryForType: false,
                         source: "CAPACITY_PROVIDER",
                     });
             }
             console.info("payload:", JSON.stringify(payload));
-            // generating token with P44 oauth API
             const getaccesstocken = await run();
-            // Calling P44 API with the constructed payload
-            return;
             const p44Response = await axios.post(endpoint, payload, {
                 headers: {
                     "Content-Type": "application/json",
@@ -164,22 +150,21 @@ module.exports.handler = async (event, context) => {
                 },
             });
             console.info("p44Response", p44Response);
-            // Inserted time stamp in CST format
             const InsertedTimeStamp = moment()
                 .tz("America/Chicago")
                 .format("YYYY-MM-DDTHH:mm:ss");
-            // Saving the response code and payload in DynamoDB
-            // As JSON.stringify is not supported for converting circular reference object to string, used Flatted npm package
             const jsonp44Response = Flatted.stringify(p44Response);
             const milestoneparams = {
                 TableName: process.env.P44_LOCATION_LOGS_TABLE_NAME,
                 Item: {
-                    UUID: uuidv4(),
-                    ReferenceNo: billOfLading,
+                    Housebill: houseBill,
+                    TimeStamp: timeStamp,
+                    ReferenceNo: referenceNo,
                     p44ResponseCode: p44Response.status,
                     p44Payload: JSON.stringify(payload),
-                    p44Response: jsonp44Response, // Added JSON P44 response
+                    p44Response: jsonp44Response,
                     InsertedTimeStamp,
+                    Status: "SUCCESS"
                 },
             };
             await putItem(milestoneparams);
@@ -221,7 +206,7 @@ async function formatTimestamp(eventdatetime, eventTimezone) {
     return date.format("YYYY-MM-DDTHH:mm:ss") + "-0" + (offset - hoursaway) + "00";
 }
 
-async function getAddress(latitude,longitude) {
+async function getAddress(latitude, longitude) {
     // const googleApiRes = await callGoogleAPi({ lat: '40.95254517', long: '-85.22586123' })
     const googleApiRes = await getAddressUsingGeocoder({ lat: latitude, long: longitude })
     console.info(':slightly_smiling_face: -> file: index.js:3 -> getAddress -> googleApiRes:', googleApiRes);
