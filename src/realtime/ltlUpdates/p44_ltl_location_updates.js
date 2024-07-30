@@ -13,17 +13,27 @@ const moment = require("moment-timezone");
 const Flatted = require("flatted");
 const _ = require("lodash");
 const NodeGeocoder = require('node-geocoder');
+const sns = new AWS.SNS();
 
 module.exports.handler = async (event, context) => {
     console.info("Received event:", JSON.stringify(event));
     const records = event.Records;
 
     const promises = records.map(async (record) => {
+        let milestoneparams = {};
+        let houseBill;
+        let timeStamp;
+        let referenceNo;
+        let p44Response;
+        let payload;
+        const InsertedTimeStamp = moment()
+            .tz("America/Chicago")
+            .format("YYYY-MM-DDTHH:mm:ss");
         try {
             const body = JSON.parse(record.body);
             const message = JSON.parse(_.get(body, "Message", {}));
             const newImage = _.get(message, "dynamodb.NewImage", {});
-            const houseBill = _.get(newImage, "HouseBillNo.S");
+            houseBill = _.get(newImage, "HouseBillNo.S");
             const longi = _.get(newImage, "longitude.N");
             const lati = _.get(newImage, "latitude.N");
 
@@ -75,7 +85,6 @@ module.exports.handler = async (event, context) => {
                 return;
             }
 
-            let referenceNo;
             const referenceparams = {
                 TableName: process.env.REFERENCES_TABLE_NAME,
                 IndexName: process.env.REFERENCES_ORDERNO_INDEX,
@@ -101,7 +110,7 @@ module.exports.handler = async (event, context) => {
             const utcTimeStamp = _.get(newImage, "UTCTimeStamp.S");
             const timezone = "CST";
             const timeStamp = await formatTimestamp(utcTimeStamp, timezone);
-            const payload = {
+            payload = {
                 customerAccount: {
                     accountIdentifier: customerName,
                 },
@@ -142,34 +151,56 @@ module.exports.handler = async (event, context) => {
             }
             console.info("payload:", JSON.stringify(payload));
             const getaccesstocken = await run();
-            const p44Response = await axios.post(endpoint, payload, {
+            p44Response = await axios.post(endpoint, payload, {
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${getaccesstocken}`,
                 },
             });
             console.info("p44Response", p44Response);
-            const InsertedTimeStamp = moment()
-                .tz("America/Chicago")
-                .format("YYYY-MM-DDTHH:mm:ss");
-            const jsonp44Response = Flatted.stringify(p44Response);
-            const milestoneparams = {
+            milestoneparams = {
                 TableName: process.env.P44_LOCATION_LOGS_TABLE_NAME,
                 Item: {
                     Housebill: houseBill,
                     TimeStamp: timeStamp,
                     ReferenceNo: referenceNo,
-                    p44ResponseCode: p44Response.status,
-                    p44Payload: JSON.stringify(payload),
-                    p44Response: jsonp44Response,
+                    P44ResponseCode: p44Response.status,
+                    P44Payload: JSON.stringify(payload),
                     InsertedTimeStamp,
-                    Status: "SUCCESS"
+                    Status: "SUCCESS",
+                    Expiration: getExpirationTimestamp(30)
                 },
             };
             await putItem(milestoneparams);
             console.info("Record is inserted successfully");
         } catch (error) {
+            milestoneparams = {
+                TableName: process.env.P44_LOCATION_LOGS_TABLE_NAME,
+                Item: {
+                    Housebill: houseBill,
+                    TimeStamp: timeStamp,
+                    ReferenceNo: referenceNo ?? "",
+                    P44ResponseCode: p44Response.status ?? "",
+                    P44Payload: JSON.stringify(payload) ?? "",
+                    InsertedTimeStamp,
+                    Status: "FAILED",
+                    Expiration: getExpirationTimestamp(30),
+                    ErrMessage: error
+                },
+            };
+            await putItem(milestoneparams);
             console.error(error);
+            try {
+                const params = {
+                  Message: `An error occurred in function ${context.functionName}.\n\nERROR DETAILS: ${error}.\n\nHouse Bill: ${houseBill}.\n\nReferenceNo: ${referenceNo}`,
+                  Subject: `An error occurred in function ${context.functionName}`,
+                  TopicArn: process.env.ERROR_SNS_TOPIC_ARN,
+                };
+                await sns.publish(params).promise();
+                console.info('SNS notification has been sent');
+              } catch (err) {
+                console.error('Error while sending SNS notification: ', err);
+              }
             throw error;
         }
     });
@@ -224,4 +255,10 @@ async function getAddressUsingGeocoder({ lat, long }) {
     const geocoder = NodeGeocoder(options);
 
     return await geocoder.reverse({ lat, lon: long });
+}
+
+function getExpirationTimestamp(days) {
+    const dayMilliseconds = 86400000;
+    const expiration = Date.now() + days * dayMilliseconds;
+    return Math.floor(expiration / 1000);
 }
