@@ -10,7 +10,6 @@ const axios = require("axios");
 const { putItem, allqueries } = require("../../shared/dynamo");
 const { run } = require("../../shared/tokengenerator");
 const moment = require("moment-timezone");
-const Flatted = require("flatted");
 const _ = require("lodash");
 const NodeGeocoder = require('node-geocoder');
 const sns = new AWS.SNS();
@@ -34,6 +33,11 @@ module.exports.handler = async (event, context) => {
             const message = JSON.parse(_.get(body, "Message", {}));
             const newImage = _.get(message, "dynamodb.NewImage", {});
             houseBill = _.get(newImage, "HouseBillNo.S");
+
+            const utcTimeStamp = _.get(newImage, "UTCTimeStamp.S");
+            const timezone = "CST";
+            timeStamp = await formatTimestamp(utcTimeStamp, timezone);
+            
             const longi = _.get(newImage, "longitude.N");
             const lati = _.get(newImage, "latitude.N");
 
@@ -107,9 +111,6 @@ module.exports.handler = async (event, context) => {
                 referenceNo = _.get(referenceResult.Items, "[0].ReferenceNo.S");
             }
 
-            const utcTimeStamp = _.get(newImage, "UTCTimeStamp.S");
-            const timezone = "CST";
-            const timeStamp = await formatTimestamp(utcTimeStamp, timezone);
             payload = {
                 customerAccount: {
                     accountIdentifier: customerName,

@@ -32,11 +32,15 @@ provider:
       Action:
         - "sqs:*"
       Resource: "*"   
+    - Effect: "Allow"
+      Action:
+        - "sns:*"
+      Resource: "*"
  
   environment:
     REGION: ${self:custom.region}
     STAGE: ${self:custom.stage}
-    ERROR_SNS_TOPIC_ARN: ${ssm:/omni-coupa-integration/${self:provider.stage}/error-notification-sns-arn}
+    ERROR_SNS_TOPIC_ARN: ${ssm:/omni-reports/${self:provider.stage}/error-notification/sns/arn}
 
 
 custom:
