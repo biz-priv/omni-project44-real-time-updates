@@ -1,3 +1,10 @@
+/*
+* File: src\shared\dynamo.js
+* Project: Omni-project44-real-time-updates
+* Author: Bizcloud Experts
+* Date: 2023-03-28
+* Confidential and Proprietary
+*/
 const AWS = require("aws-sdk");
 const dynamo = new AWS.DynamoDB({ apiVersion: "2012-08-10" });
 const dydb = new AWS.DynamoDB.DocumentClient({ apiVersion: "2012-08-10" });

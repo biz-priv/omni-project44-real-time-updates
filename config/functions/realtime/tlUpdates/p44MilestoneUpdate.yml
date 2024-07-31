@@ -5,7 +5,8 @@ function:
   memorySize: 1024
   timeout: 90
   runtime: nodejs18.x
-  
+  tags:
+    Name: omni-dw-project44-milestone-update-${self:provider.stage}
   layers:
     - { Ref: P44RtLambdaLayerLambdaLayer }
   package:

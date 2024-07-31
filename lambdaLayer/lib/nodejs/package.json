@@ -15,6 +15,7 @@
     "lodash": "^4.17.21",
     "moment": "^2.29.4",
     "moment-timezone": "^0.5.43",
+    "node-geocoder": "^4.3.0",
     "uuid": "^9.0.0"
   }
 }
