@@ -37,3 +37,4 @@ function:
     MCKESSON_CUSTOMER_NUMBERS: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/mckesson-customer/numbers}
     MCKESSON_CUSTOMER_NAME : ${ssm:/omni-p44-rt-updates/${self:provider.stage}/mckesson-customer/name}
     TIME_ZONE_TABLE_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-master/ddb.tableName~true}
+    DOTERRA_CUSTOMER_NAME: 'DOTERRA'

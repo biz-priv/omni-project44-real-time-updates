@@ -158,7 +158,7 @@ module.exports.handler = async (event, context) => {
         carrierIdentifier: {
           type: "SCAC",
           value: "OMNG",
-        },
+        },         
 
         shipmentIdentifiers: [],
         statusCode: mappedStatus.eventType,
@@ -167,19 +167,19 @@ module.exports.handler = async (event, context) => {
         timestamp: timeStamp,
         sourceType: "API",
       };
-      if (customerName === process.env.MCKESSON_CUSTOMER_NAME) {
+      if (customerName === process.env.MCKESSON_CUSTOMER_NAME || customerName === process.env.DOTERRA_CUSTOMER_NAME) {
         payload.shipmentIdentifiers.push({
           type: "PRO",
           value: billOfLading,
           primaryForType: false,
           source: "CAPACITY_PROVIDER",
         },
-          {
-            type: "BILL_OF_LADING",
-            value: billOfLading,
-            primaryForType: false,
-            source: "CAPACITY_PROVIDER",
-          });
+        {
+          type: "BILL_OF_LADING",
+          value: billOfLading,
+          primaryForType: false,
+          source: "CAPACITY_PROVIDER",
+        });
       } else {
         payload.shipmentIdentifiers.push({
           type: "BILL_OF_LADING",
