@@ -25,19 +25,19 @@ module.exports.handler = async (event, context) => {
       const newImage = get(body, "NewImage", {});
       const oldImage = get(body, "OldImage", '');
       let newRecordUpdateFlag = '';
-      if(oldImage !== ''){
-        for(const key in oldImage){
-          if(oldImage[key]['S'] !== newImage[key]['S'] && !['UUid', 'ProcessState', 'InsertedTimeStamp'].includes(key)){
+      if (oldImage !== '') {
+        for (const key in oldImage) {
+          if (oldImage[key]['S'] !== newImage[key]['S'] && !['UUid', 'ProcessState', 'InsertedTimeStamp'].includes(key)) {
             console.info(key);
             newRecordUpdateFlag = 'Yes';
           }
         }
-        if(newRecordUpdateFlag === ''){
+        if (newRecordUpdateFlag === '') {
           console.info('There is no new update for this record.So, ignoring');
           return;
         }
       }
-       // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
+      // Get the FK_OrderNo and FK_OrderStatusId from the shipment milestone table
       const orderNo = get(newImage, "FK_OrderNo.S");
       const orderStatusId = get(newImage, "FK_OrderStatusId.S");
 
@@ -66,12 +66,12 @@ module.exports.handler = async (event, context) => {
       const items = headerResult.Items;
       let BillNo;
       let housebill;
-      let fkServicelevelId ;
+      let fkServicelevelId;
 
       if (items && items.length > 0) {
-        BillNo = get(items,"[0].BillNo.S");
-        housebill = get(items,"[0].Housebill.S");
-        fkServicelevelId  = get(items,"[0].FK_ServiceLevelId.S");
+        BillNo = get(items, "[0].BillNo.S");
+        housebill = get(items, "[0].Housebill.S");
+        fkServicelevelId = get(items, "[0].FK_ServiceLevelId.S");
         console.info("BillNo:", BillNo);
         console.info("housebill:", housebill);
         console.info("fk_servicelevelid:", fkServicelevelId);
@@ -97,7 +97,7 @@ module.exports.handler = async (event, context) => {
         customerName = process.env.DOTERRA_CUSTOMER_NUMBER; // here account num and identifier are the same.
         endpoint = process.env.DOTERRA_CUSTOMER_ENDPOINT;
       }
-      if ( process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && !["HS", "FT"].includes(fkServicelevelId) ) {
+      if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && !["HS", "FT"].includes(fkServicelevelId)) {
         console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
         customerName = process.env.MCKESSON_CUSTOMER_NAME;
         endpoint = process.env.P44_LTL_STATUS_UPDATES_API;
@@ -131,7 +131,7 @@ module.exports.handler = async (event, context) => {
 
         if (referenceResult.Items.length === 0) {
           console.info(`No Bill of Lading found for order ${orderNo}`);
-          return; 
+          return;
         } else {
           referenceNo = get(referenceResult.Items, "[0].ReferenceNo.S");
         }
@@ -160,34 +160,26 @@ module.exports.handler = async (event, context) => {
           value: "OMNG",
         },
 
-        shipmentIdentifiers: [],
+        shipmentIdentifiers: [
+          {
+            type: "PRO",
+            value: billOfLading,
+            primaryForType: false,
+            source: "CAPACITY_PROVIDER",
+          },
+          {
+            type: "BILL_OF_LADING",
+            value: billOfLading,
+            primaryForType: false,
+            source: "CAPACITY_PROVIDER",
+          }
+        ],
         statusCode: mappedStatus.eventType,
         stopType: mappedStatus.stopType,
         stopNumber: mappedStatus.stopNumber,
         timestamp: timeStamp,
         sourceType: "API",
       };
-      if (customerName === process.env.MCKESSON_CUSTOMER_NAME) {
-        payload.shipmentIdentifiers.push({
-          type: "PRO",
-          value: billOfLading,
-          primaryForType: false,
-          source: "CAPACITY_PROVIDER",
-        },
-          {
-            type: "BILL_OF_LADING",
-            value: billOfLading,
-            primaryForType: false,
-            source: "CAPACITY_PROVIDER",
-          });
-      } else {
-        payload.shipmentIdentifiers.push({
-          type: "BILL_OF_LADING",
-          value: billOfLading,
-          primaryForType: false,
-          source: "CAPACITY_PROVIDER",
-        });
-      }
       console.info("payload:", JSON.stringify(payload));
       // generating token with P44 oauth API
       const getaccesstocken = await run();
