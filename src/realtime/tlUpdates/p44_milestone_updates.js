@@ -38,10 +38,7 @@ module.exports.handler = async (event, context) => {
         "DEL",
         "CAN",
       ];
-      if (!validStatusCodes.includes(orderStatusId)) {
-        console.info(`Skipping record with order status ${orderStatusId}`);
-        return;
-      }
+      
       // Checking whether the Billno's belongs to MCKESSON customer
       const headerparams = {
         TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
@@ -73,9 +70,42 @@ module.exports.handler = async (event, context) => {
         return;
       }
       let customerId = "";
+      const mappedStatus = await mapStatus(orderStatusId);
       if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && ["HS", "FT"].includes(fkServicelevelId)) {
         console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
         customerId = process.env.MCKESSON_CUSTOMER_NAME;
+        if (!validStatusCodes.includes(orderStatusId)) {
+          console.info(`Skipping record with order status ${orderStatusId}`);
+          return;
+        }
+      } else if (process.env.YOUNG_LIVING_CUSTOMER_NUMBER.includes(BillNo) && ["FT", "LT"].includes(fkServicelevelId)) {
+        console.info(`This is YOUNG_LIVING_CUSTOMER_NUMBERS`);
+        customerId = process.env.YOUNG_LIVING_CUSTOMER_NAME;
+        if(fkServicelevelId === "FT"){
+          if(!["APL", "TTC", "COB", "DLA", "DEL"].includes(orderStatusId)){
+            console.info(`Skipping record with status code ${orderStatusId} for order no ${orderNo}`)
+          }
+        }else{
+          if(!["APL", "PUP", "COB", "ADT", "DEL"].includes(orderStatusId)){
+            console.info(`Skipping record with status code ${orderStatusId} for order no ${orderNo}`)
+          }
+        }
+        const logsParams = {
+          TableName: process.env.P44_MILESTONE_LOGS_TABLE_NAME,
+          IndexName: "FK_OrderNo-StatusCode-Index",
+          KeyConditionExpression: `FK_OrderNo = :orderNo and StatusCode = :StatusCode`,
+          ExpressionAttributeValues: {
+            ":orderNo": { S: orderNo },
+            ":StatusCode": { S: get(mappedStatus, 'type', '') }
+          },
+        };
+        const logsResult = await allqueries(logsParams);
+        if(get(logsResult, "Items", []).length !== 0){
+          console.info(
+            `Skipping the record as this event ${orderStatusId} already sent to the OrderNo ${orderNo}`
+          );
+          return;
+        }
       }
       if (customerId === "") {
         console.info(
@@ -125,7 +155,6 @@ module.exports.handler = async (event, context) => {
       const utcTimestamp = moment(eventDateTime)
         .add(5 - hoursaway, "hours")
         .format("YYYY-MM-DDTHH:mm:ss");
-      const mappedStatus = await mapStatus(orderStatusId);
 
       // Construct the payload
       const payload = {
@@ -139,8 +168,10 @@ module.exports.handler = async (event, context) => {
         latitude: "0",
         longitude: "0",
         customerId: customerId,
-        eventStopNumber: mappedStatus.stopNumber,
-        eventType: mappedStatus.type,
+        eventStopNumber: get(mappedStatus, 'stopNumber', 0),
+        eventType: get(mappedStatus, 'type', ''),
+        FK_OrderNo: orderNo,
+        StatusCode: get(mappedStatus, 'type', '')
       };
       console.info("payload:", payload);
       // generating token with P44 oauth API
