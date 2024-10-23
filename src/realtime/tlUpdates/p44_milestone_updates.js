@@ -78,7 +78,7 @@ module.exports.handler = async (event, context) => {
           console.info(`Skipping record with order status ${orderStatusId}`);
           return;
         }
-      } else if (process.env.YOUNG_LIVING_CUSTOMER_NUMBER.includes(BillNo) && ["FT", "LT"].includes(fkServicelevelId)) {
+      } else if (process.env.YOUNG_LIVING_CUSTOMER_NUMBER === BillNo && ["FT", "LT"].includes(fkServicelevelId)) {
         console.info(`This is YOUNG_LIVING_CUSTOMER_NUMBERS`);
         customerId = process.env.YOUNG_LIVING_CUSTOMER_NAME;
         if(fkServicelevelId === "FT"){
