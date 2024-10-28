@@ -83,11 +83,11 @@ module.exports.handler = async (event, context) => {
         customerId = process.env.YOUNG_LIVING_CUSTOMER_NAME;
         if(fkServicelevelId === "FT"){
           if(!["APL", "TTC", "COB", "DLA", "DEL"].includes(orderStatusId)){
-            console.info(`Skipping record with status code ${orderStatusId} for order no ${orderNo}`)
+            console.info(`Skipping the record due to invalid status code status code ${orderStatusId} for order no ${orderNo}`)
           }
         }else{
           if(!["APL", "PUP", "COB", "AAD", "DEL"].includes(orderStatusId)){
-            console.info(`Skipping record with status code ${orderStatusId} for order no ${orderNo}`)
+            console.info(`Skipping the record due to invalid status code status code ${orderStatusId} for order no ${orderNo}`)
           }
         }
         const logsParams = {
@@ -170,11 +170,8 @@ module.exports.handler = async (event, context) => {
         customerId: customerId,
         eventStopNumber: get(mappedStatus, 'stopNumber', 0),
         eventType: get(mappedStatus, 'type', ''),
-        FK_OrderNo: orderNo,
-        StatusCode: get(mappedStatus, 'type', '')
       };
       console.info("payload:", payload);
-      return;
       // generating token with P44 oauth API
       const getaccesstocken = await run();
       // Calling P44 API with the constructed payload
@@ -206,6 +203,8 @@ module.exports.handler = async (event, context) => {
           p44Payload: JSON.stringify(payload),
           p44Response: jsonp44Response, // Added json P44 response
           InsertedTimeStamp,
+          FK_OrderNo: orderNo,
+          StatusCode: get(mappedStatus, 'type', '')
         },
       };
       await putItem(milestoneparams);
