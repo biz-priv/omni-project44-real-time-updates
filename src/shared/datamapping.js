@@ -33,11 +33,6 @@ async function mapStatus(validStatusCodes) {
         type: 'UNLOADING',
         stopNumber: 2
       };
-    case 'ADT':
-      return {
-        type: 'UNLOADING',
-        stopNumber: 2
-      };
     case 'AAD':
       return {
         type: 'UNLOADING',

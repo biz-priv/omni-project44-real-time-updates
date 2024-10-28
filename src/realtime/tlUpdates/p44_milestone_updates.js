@@ -86,7 +86,7 @@ module.exports.handler = async (event, context) => {
             console.info(`Skipping record with status code ${orderStatusId} for order no ${orderNo}`)
           }
         }else{
-          if(!["APL", "PUP", "COB", "ADT", "DEL"].includes(orderStatusId)){
+          if(!["APL", "PUP", "COB", "AAD", "DEL"].includes(orderStatusId)){
             console.info(`Skipping record with status code ${orderStatusId} for order no ${orderNo}`)
           }
         }
@@ -174,6 +174,7 @@ module.exports.handler = async (event, context) => {
         StatusCode: get(mappedStatus, 'type', '')
       };
       console.info("payload:", payload);
+      return;
       // generating token with P44 oauth API
       const getaccesstocken = await run();
       // Calling P44 API with the constructed payload
