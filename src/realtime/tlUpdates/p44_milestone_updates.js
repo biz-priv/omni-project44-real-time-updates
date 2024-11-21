@@ -80,7 +80,7 @@ module.exports.handler = async (event, context) => {
         }
       } else if (process.env.YOUNG_LIVING_CUSTOMER_NUMBER === BillNo && ["FT", "LT"].includes(fkServicelevelId)) {
         console.info(`This is YOUNG_LIVING_CUSTOMER_NUMBERS`);
-        customerId = process.env.YOUNG_LIVING_CUSTOMER_NAME;
+        customerId = process.env.YOUNG_LIVING_CUSTOMER_ID;
         if(fkServicelevelId === "FT"){
           if(!["APL", "TTC", "COB", "DLA", "DEL"].includes(orderStatusId)){
             console.info(`Skipping the record due to invalid status code status code ${orderStatusId} for order no ${orderNo}`)
