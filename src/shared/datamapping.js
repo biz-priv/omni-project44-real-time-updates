@@ -6,7 +6,7 @@
 * Confidential and Proprietary
 */
 
-async function mapStatus(validStatusCodes) {
+async function mapStatus(validStatusCodes, omniStatusCode = '') {
   switch (validStatusCodes) {
     case 'APL':
       return {
@@ -48,6 +48,36 @@ async function mapStatus(validStatusCodes) {
         type: 'CANCELLED',
         stopNumber: 2
       };
+    case `${process.env.YOUNG_LIVING_CUSTOMER_NUMBER}`:
+      switch (omniStatusCode) {
+        case 'APL':
+          return {
+            type: 'ARRIVED',
+            stopNumber: 1
+          };
+        case 'COB':
+          return {
+            type: 'DEPARTED',
+            stopNumber: 1
+          };
+        case 'DLA':
+          return {
+            type: 'ARRIVED',
+            stopNumber: 2
+          };
+        case 'AAD':
+          return {
+            type: 'ARRIVED',
+            stopNumber: 2
+          };
+        case 'DEL':
+          return {
+            type: 'DEPARTED',
+            stopNumber: 2
+          };
+        default:
+          throw new Error(`Invalid status code: ${validStatusCodes}`);
+      }
     default:
       throw new Error(`Invalid status code: ${validStatusCodes}`);
   }
