@@ -8,9 +8,21 @@ OmniDwP44TlUpdateTable:
         AttributeType: "S"
       - AttributeName: "ReferenceNo"
         AttributeType: "S"
+      - AttributeName: "FK_OrderNo"
+        AttributeType: "S"
+      - AttributeName: "StatusCode"
+        AttributeType: "S"
     KeySchema:
       - AttributeName: "UUID"
         KeyType: "HASH"
       - AttributeName: "ReferenceNo"
         KeyType: "RANGE"
-
+    GlobalSecondaryIndexes:
+      - IndexName: "FK_OrderNo-StatusCode-Index"
+        KeySchema:
+          - AttributeName: "FK_OrderNo"
+            KeyType: "HASH"
+          - AttributeName: "StatusCode"
+            KeyType: "RANGE"
+        Projection:
+          ProjectionType: ALL

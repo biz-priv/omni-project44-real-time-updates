@@ -12,7 +12,6 @@ const dydb = new AWS.DynamoDB.DocumentClient({ apiVersion: "2012-08-10" });
 
 async function putItem(params) {
     try {
-
       return await dydb.put(params).promise();
     } catch (e) {
       console.error("Put Item Error: ", e, "\nPut params: ", params);

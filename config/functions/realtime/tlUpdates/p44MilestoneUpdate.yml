@@ -36,3 +36,5 @@ function:
     P44_AUTH_API: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/authApi.url}
     TIME_ZONE_TABLE_NAME: ${ssm:/omni-wt-rt-updates/${self:provider.stage}/timezone-master/ddb.tableName~true}
     MCKESSON_CUSTOMER_NAME : ${ssm:/omni-p44-rt-updates/${self:provider.stage}/mckesson-customer/name}
+    YOUNG_LIVING_CUSTOMER_NUMBER: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/young-living-customer/numbers}
+    YOUNG_LIVING_CUSTOMER_ID: ${ssm:/omni-p44-rt-updates/${self:provider.stage}/young-living-customer/id}

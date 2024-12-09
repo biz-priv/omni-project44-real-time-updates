@@ -1,10 +1,10 @@
 /*
-* File: src\realtime\tlUpdates\p44_milestone_updates.js
-* Project: Omni-project44-real-time-updates
-* Author: Bizcloud Experts
-* Date: 2024-01-30
-* Confidential and Proprietary
-*/
+ * File: src\realtime\tlUpdates\p44_milestone_updates.js
+ * Project: Omni-project44-real-time-updates
+ * Author: Bizcloud Experts
+ * Date: 2024-01-30
+ * Confidential and Proprietary
+ */
 const AWS = require("aws-sdk");
 const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
@@ -18,7 +18,7 @@ const { get } = require("lodash");
 module.exports.handler = async (event, context) => {
   console.info("Received event:", JSON.stringify(event));
   const records = event.Records;
-  const id = uuidv4();
+  let id = uuidv4();
 
   const promises = records.map(async (record) => {
     try {
@@ -38,10 +38,7 @@ module.exports.handler = async (event, context) => {
         "DEL",
         "CAN",
       ];
-      if (!validStatusCodes.includes(orderStatusId)) {
-        console.info(`Skipping record with order status ${orderStatusId}`);
-        return;
-      }
+
       // Checking whether the Billno's belongs to MCKESSON customer
       const headerparams = {
         TableName: process.env.SHIPMENT_HEADER_TABLE_NAME,
@@ -73,9 +70,54 @@ module.exports.handler = async (event, context) => {
         return;
       }
       let customerId = "";
-      if (process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) && ["HS", "FT"].includes(fkServicelevelId)) {
+      let mappedStatus;
+      if (
+        process.env.MCKESSON_CUSTOMER_NUMBERS.includes(BillNo) &&
+        ["HS", "FT"].includes(fkServicelevelId)
+      ) {
+        mappedStatus = await mapStatus(orderStatusId);
         console.info(`This is MCKESSON_CUSTOMER_NUMBERS`);
         customerId = process.env.MCKESSON_CUSTOMER_NAME;
+        if (!validStatusCodes.includes(orderStatusId)) {
+          console.info(`Skipping record with order status ${orderStatusId}`);
+          return;
+        }
+      } else if (
+        process.env.YOUNG_LIVING_CUSTOMER_NUMBER === BillNo &&
+        ["FT", "LT"].includes(fkServicelevelId)
+      ) {
+        mappedStatus = await mapStatus(BillNo, orderStatusId);
+        console.info(`This is YOUNG_LIVING_CUSTOMER_NUMBERS`);
+        customerId = process.env.YOUNG_LIVING_CUSTOMER_ID;
+        if (fkServicelevelId === "FT") {
+          if (!["APL", "COB", "DLA", "DEL"].includes(orderStatusId)) {
+            console.info(
+              `Skipping the record due to invalid status code status code ${orderStatusId} for order no ${orderNo}`
+            );
+          }
+        } else {
+          if (!["APL", "COB", "AAD", "DEL"].includes(orderStatusId)) {
+            console.info(
+              `Skipping the record due to invalid status code status code ${orderStatusId} for order no ${orderNo}`
+            );
+          }
+        }
+        const logsParams = {
+          TableName: process.env.P44_MILESTONE_LOGS_TABLE_NAME,
+          IndexName: "FK_OrderNo-StatusCode-Index",
+          KeyConditionExpression: `FK_OrderNo = :orderNo and StatusCode = :StatusCode`,
+          ExpressionAttributeValues: {
+            ":orderNo": { S: orderNo },
+            ":StatusCode": { S: orderStatusId }
+          },
+        };
+        const logsResult = await allqueries(logsParams);
+        if (get(logsResult, "Items", []).length !== 0) {
+          console.info(
+            `Skipping the record as this event ${orderStatusId} already sent for the OrderNo ${orderNo}`
+          );
+          return;
+        }
       }
       if (customerId === "") {
         console.info(
@@ -125,39 +167,15 @@ module.exports.handler = async (event, context) => {
       const utcTimestamp = moment(eventDateTime)
         .add(5 - hoursaway, "hours")
         .format("YYYY-MM-DDTHH:mm:ss");
-      const mappedStatus = await mapStatus(orderStatusId);
 
-      // Construct the payload
-      const payload = {
-        shipmentIdentifiers: [
-          {
-            type: "BILL_OF_LADING",
-            value: billOfLading,
-          },
-        ],
-        utcTimestamp: utcTimestamp,
-        latitude: "0",
-        longitude: "0",
-        customerId: customerId,
-        eventStopNumber: mappedStatus.stopNumber,
-        eventType: mappedStatus.type,
-      };
-      console.info("payload:", payload);
-      // generating token with P44 oauth API
-      const getaccesstocken = await run();
-      // Calling P44 API with the constructed payload
-      const p44Response = await axios.post(
-        process.env.P44_STATUS_UPDATES_API,
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${getaccesstocken}`,
-          },
-        }
+      let { p44Response, payload } = await sendToP44(
+        billOfLading,
+        customerId,
+        utcTimestamp,
+        mappedStatus,
+        BillNo
       );
-      console.info("p44Response", p44Response);
-      // Inserted time stamp in CST format
+
       const InsertedTimeStamp = moment()
         .tz("America/Chicago")
         .format("YYYY-MM-DDTHH:mm:ss");
@@ -174,10 +192,40 @@ module.exports.handler = async (event, context) => {
           p44Payload: JSON.stringify(payload),
           p44Response: jsonp44Response, // Added json P44 response
           InsertedTimeStamp,
+          FK_OrderNo: orderNo,
+          StatusCode: orderStatusId,
+          StopType: get(mappedStatus, "type", ""),
+          StopNumber: get(mappedStatus, "stopNumber", ""),
         },
       };
       await putItem(milestoneparams);
       console.info("record is inserted successfully");
+
+      // for young living customer, we need to send the DELIVERED
+      if (
+        process.env.YOUNG_LIVING_CUSTOMER_NUMBER === BillNo &&
+        get(mappedStatus, "type") === "DEPARTED" &&
+        get(mappedStatus, "stopNumber") === 2
+      ) {
+        const response = await sendToP44(
+          billOfLading,
+          customerId,
+          utcTimestamp,
+          { type: "DELIVERED", stopNumber: "" }
+        );
+        id = uuidv4();
+        milestoneparams.Item.UUID = id;
+        milestoneparams.Item.StopType = "DELIVERED";
+        milestoneparams.Item.StopNumber = "";
+        milestoneparams.Item.p44Payload = JSON.stringify(
+          get(response, "payload")
+        );
+        milestoneparams.Item.p44Response = Flatted.stringify(
+          get(response, "p44Response")
+        );
+        await putItem(milestoneparams);
+        console.info("record for delivery is inserted successfully");
+      }
     } catch (error) {
       console.error(error);
       throw error;
@@ -191,3 +239,52 @@ module.exports.handler = async (event, context) => {
     return error;
   }
 };
+
+async function sendToP44(billOfLading, customerId, utcTimestamp, mappedStatus, BillNo) {
+  try {
+    const payload = {
+      shipmentIdentifiers: [
+        {
+          type: "BILL_OF_LADING",
+          value: billOfLading,
+        },
+      ],
+      utcTimestamp: utcTimestamp,
+      latitude: "0",
+      longitude: "0",
+      customerId: customerId,
+      eventStopNumber: get(mappedStatus, 'stopNumber', 0),
+      eventType: get(mappedStatus, 'type', ''),
+    };
+    if (process.env.YOUNG_LIVING_CUSTOMER_NUMBER === BillNo){
+      const carrierIdentifier = {
+        type: "SCAC",
+        value: "OMNG",
+      }
+      payload.carrierIdentifier = carrierIdentifier
+    }
+
+    console.info("payload:", payload);
+    // generating token with P44 oauth API
+    const getaccesstocken = await run();
+    // Calling P44 API with the constructed payload
+    const p44Response = await axios.post(
+      process.env.P44_STATUS_UPDATES_API,
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${getaccesstocken}`,
+        },
+      }
+    );
+    console.info("p44Response", p44Response);
+    return { p44Response, payload };
+  } catch (error) {
+    console.error(
+      "🚀 -> file: p44_milestone_updates.js:230 -> name -> error:",
+      error
+    );
+    throw error;
+  }
+}
