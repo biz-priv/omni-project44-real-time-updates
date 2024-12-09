@@ -215,7 +215,8 @@ module.exports.handler = async (event, context) => {
         );
         id = uuidv4();
         milestoneparams.Item.UUID = id;
-        milestoneparams.Item.stopNumber = "";
+        milestoneparams.Item.StopType = "DELIVERED";
+        milestoneparams.Item.StopNumber = "";
         milestoneparams.Item.p44Payload = JSON.stringify(
           get(response, "payload")
         );
