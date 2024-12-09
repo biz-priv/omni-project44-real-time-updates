@@ -255,7 +255,6 @@ async function sendToP44(billOfLading, customerId, utcTimestamp, mappedStatus, B
       eventStopNumber: get(mappedStatus, 'stopNumber', 0),
       eventType: get(mappedStatus, 'type', ''),
     };
-    console.info("payload:", payload);
     if (process.env.YOUNG_LIVING_CUSTOMER_NUMBER === BillNo){
       const carrierIdentifier = {
         type: "SCAC",
@@ -263,6 +262,8 @@ async function sendToP44(billOfLading, customerId, utcTimestamp, mappedStatus, B
       }
       payload.carrierIdentifier = carrierIdentifier
     }
+
+    console.info("payload:", payload);
     // generating token with P44 oauth API
     const getaccesstocken = await run();
     // Calling P44 API with the constructed payload
