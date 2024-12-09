@@ -211,7 +211,8 @@ module.exports.handler = async (event, context) => {
           billOfLading,
           customerId,
           utcTimestamp,
-          { type: "DELIVERED", stopNumber: "" }
+          { type: "DELIVERED", stopNumber: "" },
+          BillNo
         );
         id = uuidv4();
         milestoneparams.Item.UUID = id;
