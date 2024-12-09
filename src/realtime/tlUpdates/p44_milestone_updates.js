@@ -172,7 +172,8 @@ module.exports.handler = async (event, context) => {
         billOfLading,
         customerId,
         utcTimestamp,
-        mappedStatus
+        mappedStatus,
+        BillNo
       );
 
       const InsertedTimeStamp = moment()
@@ -238,7 +239,7 @@ module.exports.handler = async (event, context) => {
   }
 };
 
-async function sendToP44(billOfLading, customerId, utcTimestamp, mappedStatus) {
+async function sendToP44(billOfLading, customerId, utcTimestamp, mappedStatus, BillNo) {
   try {
     const payload = {
       shipmentIdentifiers: [
@@ -255,6 +256,13 @@ async function sendToP44(billOfLading, customerId, utcTimestamp, mappedStatus) {
       eventType: get(mappedStatus, 'type', ''),
     };
     console.info("payload:", payload);
+    if (process.env.YOUNG_LIVING_CUSTOMER_NUMBER === BillNo){
+      const carrierIdentifier = {
+        type: "SCAC",
+        value: "OMNG",
+      }
+      payload.carrierIdentifier = carrierIdentifier
+    }
     // generating token with P44 oauth API
     const getaccesstocken = await run();
     // Calling P44 API with the constructed payload
